@@ -4,9 +4,12 @@
   "description": "The chaincode for a hyperledger fabric based supply chain project for palm oil traceability",
   "main": "index.js",
   "scripts": {
+    "lint":"eslint",
+    "pretest":"npm run lint",
     "start": "fabric-chaincode-node start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "engineStrict": true,
   "keywords": [
     "Blockchain",
     "Hyperledger",
@@ -20,6 +23,7 @@
   "license": "ISC",
   "dependencies": {
     "dot-env": "^0.0.1",
+    "eslint": "^8.22.0",
     "fabric-contract-api": "^2.2.3",
     "fabric-shim": "^2.2.3"
   }
