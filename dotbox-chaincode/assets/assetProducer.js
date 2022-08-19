@@ -8,7 +8,7 @@ class Producer{
         this.farmLocation = producer.farmLocation;
         this.email = producer.email;
         this.contact = producer.contact;
-        this.docType = producer;
+        this.docType = 'producer';
     }
 }
 
