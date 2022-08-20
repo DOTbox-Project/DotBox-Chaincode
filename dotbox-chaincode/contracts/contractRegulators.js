@@ -111,8 +111,17 @@ class ContractRegulators extends Contract{
                 return regulator;
             }
             const updates = {...regulator.regulator,...newValues};
-            await ctx.stub.putState(regulator.key,Buffer.from(JSON.stringify(updates)));
-            return JSON.stringify({key:regulator.key,regulator:updates})
+            let key;
+            if (newValues['email'] !== undefined){
+                await this.deleteRegulator(ctx,currentEmail);
+                const indexKey = `regulator~email~regulatorId`;
+                key = await ctx.stub.createCompositeKey(indexKey,['regulator',newValues.email,updates.regulatorId])
+            }
+            else{
+                key = regulator.key;
+            }
+            await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
+            return JSON.stringify({key:key,regulator:updates})
         }catch(err){
             return err;
         }

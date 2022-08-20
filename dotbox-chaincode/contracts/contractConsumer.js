@@ -35,7 +35,7 @@ class ContractConsumers extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newConsumer)));
-            return JSON.stringify({key:key.toString('utf-8'),consumer:newConsumer});
+            return {key:key,consumer:newConsumer};
         }catch(err){
             return err;
         }
@@ -110,8 +110,17 @@ class ContractConsumers extends Contract{
                 return consumer;
             }
             const updates = {...consumer.consumer,...newValues};
-            await ctx.stub.putState(consumer.key,Buffer.from(JSON.stringify(updates)));
-            return JSON.stringify({key:consumer.key,consumer:updates})
+            let key;
+            if (newValues['email'] !== undefined){
+                await this.deleteConsumer(ctx,currentEmail);
+                const indexKey = `consumer~email~traderId`;
+                key = await ctx.stub.createCompositeKey(indexKey,['consumer',newValues.email,updates.consumerId])
+            }
+            else{
+                key = consumer.key;
+            }
+            await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
+            return {key:key,consumer:updates}
         }catch(err){
             return err;
         }

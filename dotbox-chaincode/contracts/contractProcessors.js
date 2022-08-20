@@ -107,8 +107,17 @@ class ContractProcessors extends Contract{
                 return processor;
             }
             const updates = {...processor.processor,...newValues};
-            await ctx.stub.putState(processor.key,Buffer.from(JSON.stringify(updates)));
-            return {key:processor.key,processor:updates}
+            let key;
+            if (newValues['email'] !== undefined){
+                await this.deleteProcessor(ctx,processor.email);
+                const indexKey = `processor~email~processorId`;
+                key = await ctx.stub.createCompositeKey(indexKey,['processor',newValues.email,updates.processorId])
+            }
+            else{
+                key = processor.key;
+            }
+            await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
+            return {key:key,processor:updates}
         }catch(err){
             return err;
         }

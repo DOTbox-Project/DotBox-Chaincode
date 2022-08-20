@@ -14,9 +14,10 @@ class ContractTraders extends Contract{
         console.log(this.TxId);
     }
 
-    async createTrader(ctx,name,storeLocation,email,contact,category){
+    async createTrader(ctx,name,storeName,storeLocation,email,contact,category){
         const trader = {
             name,
+            storeName,
             storeLocation,
             email,
             contact,
@@ -37,7 +38,7 @@ class ContractTraders extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newTrader)));
-            return JSON.stringify({key:key.toString('utf-8'),trader:newTrader});
+            return {key:key,trader:newTrader};
         }catch(err){
             return err;
         }
@@ -112,8 +113,17 @@ class ContractTraders extends Contract{
                 return trader;
             }
             const updates = {...trader.trader,...newValues};
-            await ctx.stub.putState(trader.key,Buffer.from(JSON.stringify(updates)));
-            return JSON.stringify({key:trader.key,trader:updates})
+            let key;
+            if (newValues['email'] !== undefined){
+                await this.deleteConsumer(ctx,currentEmail);
+                const indexKey = `trader~email~traderId`;
+                key = await ctx.stub.createCompositeKey(indexKey,['trader',newValues.email,updates.traderId])
+            }
+            else{
+                key = trader.key;
+            }
+            await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
+            return {key:key,trader:updates}
         }catch(err){
             return err;
         }

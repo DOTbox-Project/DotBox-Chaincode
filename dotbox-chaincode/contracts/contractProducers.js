@@ -112,8 +112,17 @@ class ContractProducers extends Contract{
                 return producer;
             }
             const updates = {...producer.producer,...newValues};
-            await ctx.stub.putState(producer.key,Buffer.from(JSON.stringify(updates)));
-            return JSON.stringify({key:producer.key,producer:updates})
+            let key;
+            if (newValues['email'] !== undefined){
+                await this.deleteProducer(ctx,currentEmail);
+                const indexKey = `producer~email~producerId`;
+                key = await ctx.stub.createCompositeKey(indexKey,['producer',newValues.email,updates.producerId])
+            }
+            else{
+                key = producer.key;
+            }
+            await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
+            return {key:key,producer:updates}
         }catch(err){
             return err;
         }
