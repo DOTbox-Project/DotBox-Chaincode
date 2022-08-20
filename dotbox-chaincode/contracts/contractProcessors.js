@@ -23,12 +23,16 @@ class ContractProcessors extends Contract{
             certificateAuthorities
         }
         try{
-            // instantiating a new producer
+            // instantiating a new processor
             const newProcessor = new assetProcessors(processor);
-            
+
+            const doesProcessorExist = await this.getProcessorByEmail(ctx,email);
+            if (doesProcessorExist !== 'Processor not found'){
+                return `Processor with email ${email} already exists`;
+            }
             // creating a composite key
             const indexKey = `processor~email~processorId`;
-            const key = await ctx.stub.createCompositeKey(indexKey,['processor',newProducer.email,newProducer.producerId])
+            const key = await ctx.stub.createCompositeKey(indexKey,['processor',newProcessor.email,newProcessor.processorId])
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newProcessor)));
@@ -49,14 +53,14 @@ class ContractProcessors extends Contract{
             while(true){
                 const res = await resultsIterator.next();
                 if(res.value){
-                    processors.push({key:res.value.key.toString('utf-8'),processor:res.value.value.toString('utf-8')});
+                    processors.push({key:res.value.key,processor:JSON.parse(res.value.value.toString('utf-8'))});
                 }
                 if(res.done){
                     await resultsIterator.close();
-                    if(producers.length === 0){
+                    if(processors.length === 0){
                         return 'Processor not found';
                     }else{
-                        return JSON.stringify(processors[0]);
+                        return processors[0];
                     }
                 }
             }
@@ -68,15 +72,19 @@ class ContractProcessors extends Contract{
     async getAllProcessors(ctx){
         try{
             const allProcessors = [];
-            const processorsIterator = await ctx.stub.getStateByPartialCompositeKey('processor~email~processorId',['processor']);
+            let processorsIterator = await ctx.stub.getStateByPartialCompositeKey('processor~email~processorId',['processor']);
             while(true){
-                const processor = processorsIterator.next();
+                const processor = await processorsIterator.next();
                 if(processor.value){
-                    allProcessors.push({key:processor.value.key.toString('utf-8'),processor:JSON.parse(producer.value.value.toString('utf-8'))})
+                    allProcessors.push({key:processor.value.key,processor:JSON.parse(processor.value.value.toString('utf-8'))})
                 }
-                if(processorsIterator.done){
-                    processorsIterator.close();
-                    return JSON.stringify({processors:allProcessors});
+                if(processor.done){
+                    await processorsIterator.close();
+                    if(allProcessors.length === 0){
+                        return 'No proessors created';
+                    }else{
+                        return allProcessors;
+                    } 
                 }
             }
         }catch(err){
@@ -86,31 +94,31 @@ class ContractProcessors extends Contract{
 
     async updateProcessor(ctx){
         try{
-            const args = ctx.stub.getArgs();
+            const args = await ctx.stub.getArgs();
             const currentEmail = args[1];
             const newValues = {}
-            for(let i=1;i<args.length;i+2){
-                newValues[args[i]] = args[i+1];
-            }
-            let processor = this.getProcessorByEmail(ctx,currentEmail);
-            if(processor === 'Producer not found'){
+            args.forEach((element,index)=>{
+                if(index>=2 && index%2==0){
+                    newValues[element] = args[index+1]
+                }
+            })
+            let processor = await this.getProcessorByEmail(ctx,currentEmail);
+            if(processor === 'Processor not found'){
                 return processor;
             }
-            processor = JSON.parse(processor);
             const updates = {...processor.processor,...newValues};
             await ctx.stub.putState(processor.key,Buffer.from(JSON.stringify(updates)));
-            return JSON.stringify({key:processor.key,processor:updates})
+            return {key:processor.key,processor:updates}
         }catch(err){
             return err;
         }
     }
 
     async deleteProcessor(ctx,email){
-        const processor = this.getProcessorByEmail(ctx,email);
+        const processor = await this.getProcessorByEmail(ctx,email);
         if(processor === 'Processor not found'){
             return processor;
         }
-        processor = JSON.parse(processor);
         await ctx.stub.deleteState(processor.key);
         return 'Deleted Successfully';
     }

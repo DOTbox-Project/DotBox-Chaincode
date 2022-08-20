@@ -25,6 +25,11 @@ class ContractProducers extends Contract{
         try{
             // instantiating a new producer
             const newProducer = new assetProducer(producer);
+
+            const doesProducerExist = await this.getProducerByEmail(ctx,email);
+            if (doesProducerExist !== 'Producer not found'){
+                return `Producer with email ${email} already exists`;
+            }
             
             // creating a composite key
             const indexKey = `producer~email~producerId`;
@@ -49,14 +54,14 @@ class ContractProducers extends Contract{
             while(true){
                 const res = await resultsIterator.next();
                 if(res.value){
-                    producers.push({key:res.value.key.toString('utf-8'),producer:res.value.value.toString('utf-8')});
+                    producers.push({key:res.value.key,producer:JSON.parse(res.value.value.toString('utf-8'))});
                 }
                 if(res.done){
                     await resultsIterator.close();
                     if(producers.length === 0){
                         return 'Producer not found';
                     }else{
-                        return JSON.stringify(producers[0]);
+                        return producers[0];
                     }
                 }
             }
@@ -76,14 +81,14 @@ class ContractProducers extends Contract{
             while(true){
                 const res = await resultsIterator.next();
                 if(res.value){
-                    producers.push({key:res.value.key.toString('utf-8'),producer:res.value.value.toString('utf-8')});
+                    producers.push({key:res.value.key,producer:JSON.parse(res.value.value.toString('utf-8'))});
                 }
                 if(res.done){
                     await resultsIterator.close();
                     if(producers.length === 0){
                         return 'No producers created';
                     }else{
-                        return JSON.stringify(producers);
+                        return producers;
                     }
                 }
             }
@@ -106,12 +111,9 @@ class ContractProducers extends Contract{
             if(producer === 'Producer not found'){
                 return producer;
             }
-            producer = JSON.parse(producer);
-            
             const updates = {...producer.producer,...newValues};
-            return updates;
-            // await ctx.stub.putState(producer.key,Buffer.from(JSON.stringify(updates)));
-            // return JSON.stringify({key:producer.key,producer:updates})
+            await ctx.stub.putState(producer.key,Buffer.from(JSON.stringify(updates)));
+            return JSON.stringify({key:producer.key,producer:updates})
         }catch(err){
             return err;
         }
@@ -123,10 +125,8 @@ class ContractProducers extends Contract{
             if(producer === 'Producer not found'){
                 return producer;
             }
-            producer = JSON.parse(producer);
-            return JSON.stringify(producer.key);
-            // await ctx.stub.deleteState(producer.key);
-            // return 'Deleted Successfully';
+            await ctx.stub.deleteState(producer.key);
+            return 'Deleted Successfully';
         }catch(err){
             return err;
         }
