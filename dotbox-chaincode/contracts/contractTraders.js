@@ -71,6 +71,31 @@ class ContractTraders extends Contract{
         }
     }
 
+    async getTraderById(ctx,traderId){
+        try{
+            const queryString = {
+                "selector":{
+                    "docType":"trader",
+                    traderId:traderId
+                }
+            }
+            let tradersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const traders = []
+            while(true){
+                let trader = await tradersIterator.next();
+                if(trader.value){
+                    traders.push({key:trader.value.key,trader:JSON.parse(trader.value.value.toString('utf-8'))});
+                }
+                if(trader.done){
+                    await tradersIterator.close();
+                    return traders[0];
+                }
+            }
+        }catch(err){
+            return err
+        }
+    }
+
     async getAllTraders(ctx){
         try{
             // collect the keys
@@ -91,6 +116,38 @@ class ContractTraders extends Contract{
                     }else{
                         return traders;
                     }
+                }
+            }
+        }catch(err){
+            return err;
+        }
+    }
+
+    async getTradersByQueryParams(ctx){
+        try{
+            const args = await ctx.stub.getArgs();
+            const newValues = {}
+            args.forEach((element,index)=>{
+                if(index>=1 && index%2==1){
+                    newValues[element] = args[index+1]
+                }
+            })
+            const queryString = {
+                "selector":{
+                    "docType":"trader",
+                    ...newValues
+                }
+            }
+            let tradersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const traders = []
+            while(true){
+                let trader = await tradersIterator.next();
+                if(trader.value){
+                    traders.push({key:trader.value.key,trader:JSON.parse(trader.value.value.toString('utf-8'))});
+                }
+                if(trader.done){
+                    await tradersIterator.close();
+                    return traders;
                 }
             }
         }catch(err){

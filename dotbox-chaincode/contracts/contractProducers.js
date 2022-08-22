@@ -70,6 +70,31 @@ class ContractProducers extends Contract{
         }
     }
 
+    async getProducerById(ctx,producerId){
+        try{
+            const queryString = {
+                "selector":{
+                    "docType":"producer",
+                    producerId:producerId
+                }
+            }
+            let producersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const producers = []
+            while(true){
+                let producer = await producersIterator.next();
+                if(producer.value){
+                    producers.push({key:producer.value.key,producer:JSON.parse(producer.value.value.toString('utf-8'))});
+                }
+                if(producer.done){
+                    await producersIterator.close();
+                    return producers[0];
+                }
+            }
+        }catch(err){
+            return err
+        }
+    }
+
     async getAllProducers(ctx){
         try{
             // collect the keys
@@ -90,6 +115,38 @@ class ContractProducers extends Contract{
                     }else{
                         return producers;
                     }
+                }
+            }
+        }catch(err){
+            return err;
+        }
+    }
+
+    async getProducersByQueryParams(ctx){
+        try{
+            const args = await ctx.stub.getArgs();
+            const newValues = {}
+            args.forEach((element,index)=>{
+                if(index>=1 && index%2==1){
+                    newValues[element] = args[index+1]
+                }
+            })
+            const queryString = {
+                "selector":{
+                    "docType":"producer",
+                    ...newValues
+                }
+            }
+            let producersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const producers = []
+            while(true){
+                let producer = await producersIterator.next();
+                if(producer.value){
+                    producers.push({key:producer.value.key,producer:JSON.parse(producer.value.value.toString('utf-8'))});
+                }
+                if(producer.done){
+                    await producersIterator.close();
+                    return producers;
                 }
             }
         }catch(err){

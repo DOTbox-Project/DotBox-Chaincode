@@ -36,7 +36,7 @@ class ContractRegulators extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newRegulator)));
-            return JSON.stringify({key:key.toString('utf-8'),regulator:newRegulator});
+            return {key:key,regulator:newRegulator};
         }catch(err){
             return err;
         }
@@ -69,6 +69,31 @@ class ContractRegulators extends Contract{
         }
     }
 
+    async getRegulatorById(ctx,regulatorId){
+        try{
+            const queryString = {
+                "selector":{
+                    "docType":"regulator",
+                    regulatorId:regulatorId
+                }
+            }
+            let regulatorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const regulators = []
+            while(true){
+                let regulator = await regulatorsIterator.next();
+                if(regulator.value){
+                    regulators.push({key:regulator.value.key,regulator:JSON.parse(regulator.value.value.toString('utf-8'))});
+                }
+                if(regulator.done){
+                    await regulatorsIterator.close();
+                    return regulators[0];
+                }
+            }
+        }catch(err){
+            return err
+        }
+    }
+
     async getAllRegulators(ctx){
         try{
             // collect the keys
@@ -89,6 +114,38 @@ class ContractRegulators extends Contract{
                     }else{
                         return regulators;
                     }
+                }
+            }
+        }catch(err){
+            return err;
+        }
+    }
+
+    async getRegulatorsByQueryParams(ctx){
+        try{
+            const args = await ctx.stub.getArgs();
+            const newValues = {}
+            args.forEach((element,index)=>{
+                if(index>=1 && index%2==1){
+                    newValues[element] = args[index+1]
+                }
+            })
+            const queryString = {
+                "selector":{
+                    "docType":"trader",
+                    ...newValues
+                }
+            }
+            let regulatorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const traders = []
+            while(true){
+                let trader = await regulatorsIterator.next();
+                if(trader.value){
+                    traders.push({key:trader.value.key,trader:JSON.parse(trader.value.value.toString('utf-8'))});
+                }
+                if(trader.done){
+                    await regulatorsIterator.close();
+                    return traders;
                 }
             }
         }catch(err){

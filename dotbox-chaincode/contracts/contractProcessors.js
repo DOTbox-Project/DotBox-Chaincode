@@ -69,6 +69,31 @@ class ContractProcessors extends Contract{
         }
     }
 
+    async getProcessorById(ctx,processorId){
+        try{
+            const queryString = {
+                "selector":{
+                    "docType":"processor",
+                    processorId:processorId
+                }
+            }
+            let processorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const processors = []
+            while(true){
+                let processor = await processorsIterator.next();
+                if(processor.value){
+                    processors.push({key:processor.value.key,processor:JSON.parse(processor.value.value.toString('utf-8'))});
+                }
+                if(processor.done){
+                    await processorsIterator.close();
+                    return processors[0];
+                }
+            }
+        }catch(err){
+            return err
+        }
+    }
+
     async getAllProcessors(ctx){
         try{
             const allProcessors = [];
@@ -85,6 +110,38 @@ class ContractProcessors extends Contract{
                     }else{
                         return allProcessors;
                     } 
+                }
+            }
+        }catch(err){
+            return err;
+        }
+    }
+
+    async getProcessorsByQueryParams(ctx){
+        try{
+            const args = await ctx.stub.getArgs();
+            const newValues = {}
+            args.forEach((element,index)=>{
+                if(index>=1 && index%2==1){
+                    newValues[element] = args[index+1]
+                }
+            })
+            const queryString = {
+                "selector":{
+                    "docType":"processor",
+                    ...newValues
+                }
+            }
+            let processorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const processors = []
+            while(true){
+                let processor = await processorsIterator.next();
+                if(processor.value){
+                    processors.push({key:processor.value.key,processor:JSON.parse(processor.value.value.toString('utf-8'))});
+                }
+                if(processor.done){
+                    await processorsIterator.close();
+                    return processors;
                 }
             }
         }catch(err){

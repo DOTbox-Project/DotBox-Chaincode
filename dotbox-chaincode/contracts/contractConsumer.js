@@ -95,6 +95,63 @@ class ContractConsumers extends Contract{
         }
     }
 
+    async getConsumerById(ctx,consumer){
+        try{
+            const queryString = {
+                "selector":{
+                    "docType":"consumer",
+                    consumer:consumer
+                }
+            }
+            let consumersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const consumers = []
+            while(true){
+                let consumer = await consumersIterator.next();
+                if(consumer.value){
+                    consumers.push({key:consumer.value.key,consumer:JSON.parse(consumer.value.value.toString('utf-8'))});
+                }
+                if(consumer.done){
+                    await consumersIterator.close();
+                    return consumers[0];
+                }
+            }
+        }catch(err){
+            return err
+        }
+    }
+
+    async getConsumersByQueryParams(ctx){
+        try{
+            const args = await ctx.stub.getArgs();
+            const newValues = {}
+            args.forEach((element,index)=>{
+                if(index>=1 && index%2==1){
+                    newValues[element] = args[index+1]
+                }
+            })
+            const queryString = {
+                "selector":{
+                    "docType":"consumer",
+                    ...newValues
+                }
+            }
+            let consumersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const consumers = []
+            while(true){
+                let consumer = await consumersIterator.next();
+                if(consumer.value){
+                    consumers.push({key:consumer.value.key,consumer:JSON.parse(consumer.value.value.toString('utf-8'))});
+                }
+                if(consumer.done){
+                    await consumersIterator.close();
+                    return consumers;
+                }
+            }
+        }catch(err){
+            return err;
+        }
+    }
+
     async updateConsumer(ctx){
         try{
             const args = await ctx.stub.getArgs();
