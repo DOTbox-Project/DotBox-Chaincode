@@ -3,21 +3,46 @@ const {v4:uuidv4} = require('uuid');
 
 class PalmOil{
     constructor(palmOil){
-        this.batchID=uuidv4();
+        this.palmOilId=uuidv4();
+        this.batchId = palmOil.batchId;
         this.componentProductIDs=palmOil.componentProductIDs;
         this.productionDate=palmOil.productionDate;
         this.expirationDate=palmOil.expirationDate;
-        this.unitQuantityType=palmOil.unitQuantityType;
+        this.unitType=palmOil.unitType;
         this.unitQuantity=palmOil.unitQuantity;
-        this.batchQuantity=palmOil.batchQuantity;
-        this.productTest=palmOil.productTest;
-        this.approval=palmOil.approval;
-        this.location=palmOil.location;
-        this.soldTo=palmOil.soldTo;
+        this.productTest='';
+        this.approvedBy='';
+        this.producedBy=palmOil.producedBy;
+        this.volumePerUnit=palmOil.volumePerUnit;
         this.docType='palmOil';
     }
 }
 
-module.exports = PalmOil;
+class unitPalmOil{
+    constructor(unit){
+        this.unitId = uuidv4();
+        this.batchId = unit.batchId;
+        this.location = unit.locationId;
+        this.owner = unit.owner;
+        this.volume = unit.volume;
+        this.docType = 'unitPalmOil';
+    }
+}
+
+class repackagedUnitPalmOil{
+    constructor(unit){
+        this.repackagedId = uuidv4();
+        this.componentIds = unit.componentIds;
+        this.batchId = unit.batchId;
+        this.volume = unit.volume;
+        this.owner = unit.owner;
+        this.location = unit.locationId;
+        this.docType = 'repackagedUnit';
+    }
+}
+
+module.exports.assetPalmOil = PalmOil;
+module.exports.assetUnitPalmOil = unitPalmOil;
+module.exports.assetRepackagedUnitPalmOil = repackagedUnitPalmOil;
 
 
