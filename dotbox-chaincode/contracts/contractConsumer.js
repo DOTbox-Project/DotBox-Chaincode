@@ -14,17 +14,12 @@ class ContractConsumers extends Contract{
         console.log(this.TxId);
     }
 
-    async createConsumer(ctx,name,email,contact){
-        const consumer = {
-            name,
-            email,
-            contact,
-        }
+    async createConsumer(ctx,consumer){
         try{
             // instantiating a new consumer
-            const newConsumer = new assetConsumer(consumer);
+            const newConsumer = new assetConsumer(JSON.parse(consumer));
 
-            const doesConsumerExist = await this.getConsumerByEmail(ctx,email);
+            const doesConsumerExist = await this.getConsumerByEmail(ctx,consumer.email);
             if (doesConsumerExist !== 'Consumer not found'){
                 return `Consumer with email ${email} already exists`;
             }
@@ -95,12 +90,12 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getConsumerById(ctx,consumer){
+    async getConsumerById(ctx,consumerId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"consumer",
-                    consumer:consumer
+                    consumerId:consumerId
                 }
             }
             let consumersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -120,15 +115,9 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getConsumersByQueryParams(ctx){
+    async getConsumersByQueryParams(ctx,params){
         try{
-            const args = await ctx.stub.getArgs();
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(params);
             const queryString = {
                 "selector":{
                     "docType":"consumer",
@@ -152,16 +141,9 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async updateConsumer(ctx){
+    async updateConsumer(ctx,currentEmail,updatedValues){
         try{
-            const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(updatedValues);
             let consumer = await this.getConsumerByEmail(ctx,currentEmail);
             if(consumer === 'Consumer not found'){
                 return consumer;

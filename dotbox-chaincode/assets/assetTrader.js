@@ -2,7 +2,7 @@ const {v4:uuidv4} = require('uuid')
 
 class Trader{
     constructor(trader){
-        this.traderId = uuidv4();
+        this.traderId = trader.traderId;
         this.owner = trader.name;
         this.storeName = trader.storeName;
         this.storeLocation = trader.storeLocation;

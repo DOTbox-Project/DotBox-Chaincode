@@ -12,21 +12,12 @@ class ContractProcessors extends Contract{
         console.log(this.TxId);
     }
 
-    async createProcessor(ctx,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities){
-        const processor = {
-            name,
-            location,
-            email,
-            contact,
-            hasTestingLab,
-            lastCertified,
-            certificateAuthorities
-        }
+    async createProcessor(ctx,processor){
         try{
             // instantiating a new processor
-            const newProcessor = new assetProcessors(processor);
+            const newProcessor = new assetProcessors(JSON.parse(processor));
 
-            const doesProcessorExist = await this.getProcessorByEmail(ctx,email);
+            const doesProcessorExist = await this.getProcessorByEmail(ctx,processor.email);
             if (doesProcessorExist !== 'Processor not found'){
                 return `Processor with email ${email} already exists`;
             }
@@ -117,15 +108,9 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async getProcessorsByQueryParams(ctx){
+    async getProcessorsByQueryParams(ctx,params){
         try{
-            const args = await ctx.stub.getArgs();
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(params);
             const queryString = {
                 "selector":{
                     "docType":"processor",
@@ -149,16 +134,9 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async updateProcessor(ctx){
+    async updateProcessor(ctx,currentEmail,updatedValues){
         try{
-            const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(updatedValues);
             let processor = await this.getProcessorByEmail(ctx,currentEmail);
             if(processor === 'Processor not found'){
                 return processor;

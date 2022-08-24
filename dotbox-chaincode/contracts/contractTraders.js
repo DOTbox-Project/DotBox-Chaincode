@@ -14,20 +14,12 @@ class ContractTraders extends Contract{
         console.log(this.TxId);
     }
 
-    async createTrader(ctx,name,storeName,storeLocation,email,contact,category){
-        const trader = {
-            name,
-            storeName,
-            storeLocation,
-            email,
-            contact,
-            category
-        }
+    async createTrader(ctx,trader){
         try{
             // instantiating a new trader
-            const newTrader = new assetTrader(trader);
+            const newTrader = new assetTrader(JSON.parse(trader));
 
-            const doesTraderExist = await this.getTraderByEmail(ctx,email);
+            const doesTraderExist = await this.getTraderByEmail(ctx,trader.email);
             if (doesTraderExist !== 'Trader not found'){
                 return `Trader with email ${email} already exists`;
             }
@@ -123,15 +115,9 @@ class ContractTraders extends Contract{
         }
     }
 
-    async getTradersByQueryParams(ctx){
+    async getTradersByQueryParams(ctx,params){
         try{
-            const args = await ctx.stub.getArgs();
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(params);
             const queryString = {
                 "selector":{
                     "docType":"trader",
@@ -155,16 +141,9 @@ class ContractTraders extends Contract{
         }
     }
 
-    async updateTrader(ctx){
+    async updateTrader(ctx,currentEmail,updatedValues){
         try{
-            const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(updatedValues);
             let trader = await this.getTraderByEmail(ctx,currentEmail);
             if(trader === 'Trader not found'){
                 return trader;

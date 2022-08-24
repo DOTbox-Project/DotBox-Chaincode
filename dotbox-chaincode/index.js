@@ -15,4 +15,4 @@ module.exports.ContractConsumers = contractConsumers;
 module.exports.ContractFFB = contractFFB
 
 
-module.exports.contracts = [contractFFB];
+module.exports.contracts = [contractProducers];

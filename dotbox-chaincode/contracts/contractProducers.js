@@ -14,19 +14,13 @@ class ContractProducers extends Contract{
         console.log(this.TxId);
     }
 
-    async createProducer(ctx,name,farmName,farmLocation,email,contact){
-        const producer = {
-            name,
-            farmName,
-            farmLocation,
-            email,
-            contact
-        }
+    async createProducer(ctx,producer){
+       
         try{
             // instantiating a new producer
-            const newProducer = new assetProducer(producer);
+            const newProducer = new assetProducer(JSON.parse(producer));
 
-            const doesProducerExist = await this.getProducerByEmail(ctx,email);
+            const doesProducerExist = await this.getProducerByEmail(ctx,producer.email);
             if (doesProducerExist !== 'Producer not found'){
                 return `Producer with email ${email} already exists`;
             }
@@ -122,15 +116,9 @@ class ContractProducers extends Contract{
         }
     }
 
-    async getProducersByQueryParams(ctx){
+    async getProducersByQueryParams(ctx,params){
         try{
-            const args = await ctx.stub.getArgs();
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(params);
             const queryString = {
                 "selector":{
                     "docType":"producer",
@@ -154,16 +142,10 @@ class ContractProducers extends Contract{
         }
     }
 
-    async updateProducer(ctx){
+    async updateProducer(ctx,currentEmail,updatedValues){
         try{
-            const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(updatedValues);
+            
             let producer = await this.getProducerByEmail(ctx,currentEmail);
             if(producer === 'Producer not found'){
                 return producer;

@@ -14,18 +14,12 @@ class ContractRegulators extends Contract{
         console.log(this.TxId);
     }
 
-    async createRegulator(ctx,name,location,email,contact){
-        const regulator = {
-            name,
-            location,
-            email,
-            contact
-        }
+    async createRegulator(ctx,regulator){
         try{
             // instantiating a new regulator
-            const newRegulator = new assetRegulator(regulator);
+            const newRegulator = new assetRegulator(SON.parse(regulator));
 
-            const doesRegulatorExist = await this.getRegulatorByEmail(ctx,email);
+            const doesRegulatorExist = await this.getRegulatorByEmail(ctx,regulator.email);
             if (doesRegulatorExist !== 'Regulator not found'){
                 return `Regulator with email ${email} already exists`;
             }
@@ -121,15 +115,9 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async getRegulatorsByQueryParams(ctx){
+    async getRegulatorsByQueryParams(ctx,params){
         try{
-            const args = await ctx.stub.getArgs();
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(params);
             const queryString = {
                 "selector":{
                     "docType":"trader",
@@ -153,16 +141,9 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async updateRegulator(ctx){
+    async updateRegulator(ctx,currentEmail,updatedValues){
         try{
-            const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
-            args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
-                }
-            })
+            const newValues = JSON.parse(updatedValues);
             let regulator = await this.getRegulatorByEmail(ctx,currentEmail);
             if(regulator === 'Regulator not found'){
                 return regulator;

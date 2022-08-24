@@ -2,9 +2,9 @@ const {v4:uuidv4} = require('uuid')
 
 class ProductLocationData{
     constructor(location){
-        this.locationId=uuidv4();
+        this.locationId=location.locationId;
         this.previousLocations="";
-        this.currentLocation=location;
+        this.currentLocation=location.location;
         this.docType='location';
     }
 }
