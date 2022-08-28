@@ -7,6 +7,7 @@ class Regulator {
         this.contact = regulator.contact;
         this.email = regulator.email;
         this.regulatorLocation = regulator.location;
+        this.password = regulator.password;
         this.docType = 'regulator';
     }
 }

@@ -10,6 +10,7 @@ class Processor{
         this.hasTestingLab = processor.hasTestingLab;
         this.lastCertified = processor.lastCertified;
         this.certificateAuthorities = processor.certificateAuthorities;
+        this.password = processor.password
         this.docType = 'processor';
     }
 }

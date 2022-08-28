@@ -6,6 +6,7 @@ class Consumer{
         this.name = consumer.name;
         this.email = consumer.email;
         this.contact = consumer.contact;
+        this.password = consumer.password;
         this.docType = 'consumer';
     }
 }

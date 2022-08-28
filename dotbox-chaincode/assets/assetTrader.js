@@ -9,6 +9,7 @@ class Trader{
         this.contact = trader.contact;
         this.email = trader.email;
         this.category = trader.category; 
+        this.password = trader.password;
         this.docType = 'trader';
     }
 }
