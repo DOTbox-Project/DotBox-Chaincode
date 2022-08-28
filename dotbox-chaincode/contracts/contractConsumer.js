@@ -14,19 +14,21 @@ class ContractConsumers extends Contract{
         console.log(this.TxId);
     }
 
-    async createConsumer(ctx,name,email,contact){
-        const consumer = {
-            name,
-            email,
-            contact,
-        }
+    async createConsumer(ctx,consumerId,name,email,contact,password){
         try{
             // instantiating a new consumer
+            const consumer = {
+                consumerId,
+                name,
+                email,
+                password,
+                contact
+            }
             const newConsumer = new assetConsumer(consumer);
 
-            const doesConsumerExist = await this.getConsumerByEmail(ctx,email);
-            if (doesConsumerExist !== 'Consumer not found'){
-                return `Consumer with email ${email} already exists`;
+            const doesConsumerExist = await this.getConsumerByEmail(ctx,consumer.email);
+            if (JSON.parse(doesConsumerExist).error !== 'Consumer not found'){
+                return JSON.stringify({error:`Consumer with email ${email} already exists`});
             }
             
             // creating a composite key
@@ -35,7 +37,8 @@ class ContractConsumers extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newConsumer)));
-            return {key:key,consumer:newConsumer};
+            delete consumer.password;
+            return JSON.stringify({key:key,consumer:consumer});
         }catch(err){
             return err;
         }
@@ -57,9 +60,9 @@ class ContractConsumers extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(consumers.length === 0){
-                        return 'Consumer not found';
+                        return JSON.stringify({error:'Consumer not found'});
                     }else{
-                        return consumers[0];
+                        return JSON.stringify(consumers[0]);
                     }
                 }
             }
@@ -84,9 +87,9 @@ class ContractConsumers extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(consumers.length === 0){
-                        return 'No consumers created';
+                        return JSON.stringify({error:'No consumers created'});
                     }else{
-                        return consumers;
+                        return JSON.stringify({consumers});
                     }
                 }
             }
@@ -95,12 +98,12 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getConsumerById(ctx,consumer){
+    async getConsumerById(ctx,consumerId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"consumer",
-                    consumer:consumer
+                    consumerId:consumerId
                 }
             }
             let consumersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -112,7 +115,10 @@ class ContractConsumers extends Contract{
                 }
                 if(consumer.done){
                     await consumersIterator.close();
-                    return consumers[0];
+                    if(consumers.length === 0){
+                        return JSON.stringify({error:'Consumer not found'});
+                    }
+                    return JSON.stringify(consumers[0]);
                 }
             }
         }catch(err){
@@ -123,12 +129,12 @@ class ContractConsumers extends Contract{
     async getConsumersByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const newValues = {}
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 1){
+                    newValues[element] = args[index+1];
                 }
-            })
+            });
             const queryString = {
                 "selector":{
                     "docType":"consumer",
@@ -144,7 +150,10 @@ class ContractConsumers extends Contract{
                 }
                 if(consumer.done){
                     await consumersIterator.close();
-                    return consumers;
+                    if(consumers.length === 0){
+                        return JSON.stringify({error:'Consumer not found'})
+                    }
+                    return JSON.stringify({consumers});
                 }
             }
         }catch(err){
@@ -155,21 +164,22 @@ class ContractConsumers extends Contract{
     async updateConsumer(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
+            const consumerId = args[1];
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 0 && index > 1){
+                    newValues[element] = args[index+1];
                 }
-            })
-            let consumer = await this.getConsumerByEmail(ctx,currentEmail);
+            });
+            let consumer = await this.getConsumerById(ctx,consumerId);
+            consumer = JSON.parse(consumer);
             if(consumer === 'Consumer not found'){
-                return consumer;
+                return JSON.stringify(consumer);
             }
             const updates = {...consumer.consumer,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteConsumer(ctx,currentEmail);
+                await this.deleteConsumer(ctx,consumerId);
                 const indexKey = `consumer~email~traderId`;
                 key = await ctx.stub.createCompositeKey(indexKey,['consumer',newValues.email,updates.consumerId])
             }
@@ -177,20 +187,20 @@ class ContractConsumers extends Contract{
                 key = consumer.key;
             }
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
-            return {key:key,consumer:updates}
+            return JSON.stringify({key:key,consumer:updates});
         }catch(err){
             return err;
         }
     }
 
-    async deleteConsumer(ctx,email){
+    async deleteConsumer(ctx,consumerId){
         try{
-            const consumer = await this.getConsumerByEmail(ctx,email);
-            if(consumer === 'Consumer not found'){
+            const consumer = await this.getConsumerById(ctx,consumerId);
+            if(JSON.parse(consumer).error === 'Consumer not found'){
                 return consumer;
             }
-            await ctx.stub.deleteState(consumer.key);
-            return 'Deleted Successfully';
+            await ctx.stub.deleteState(JSON.parse(consumer).key);
+            return JSON.stringify({message:'Deleted Successfully'});
         }catch(err){
             return err;
         }

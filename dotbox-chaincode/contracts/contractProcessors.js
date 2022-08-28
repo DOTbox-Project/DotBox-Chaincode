@@ -12,22 +12,24 @@ class ContractProcessors extends Contract{
         console.log(this.TxId);
     }
 
-    async createProcessor(ctx,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities){
-        const processor = {
-            name,
-            location,
-            email,
-            contact,
-            hasTestingLab,
-            lastCertified,
-            certificateAuthorities
-        }
+    async createProcessor(ctx,processorId,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities,password){
         try{
+            const processor = {
+                processorId,
+                name,
+                location,
+                email,
+                contact,
+                hasTestingLab,
+                lastCertified,
+                certificateAuthorities,
+                password
+            }
             // instantiating a new processor
             const newProcessor = new assetProcessors(processor);
 
-            const doesProcessorExist = await this.getProcessorByEmail(ctx,email);
-            if (doesProcessorExist !== 'Processor not found'){
+            const doesProcessorExist = await this.getProcessorByEmail(ctx,processor.email);
+            if (JSON.parse(doesProcessorExist).error !== 'Processor not found'){
                 return `Processor with email ${email} already exists`;
             }
             // creating a composite key
@@ -36,7 +38,8 @@ class ContractProcessors extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newProcessor)));
-            return JSON.stringify({key:key.toString('utf-8'),processor:newProcessor});
+            delete processor.password
+            return JSON.stringify({key:key,processor:processor});
         }catch(err){
             return err;
         }
@@ -58,9 +61,9 @@ class ContractProcessors extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(processors.length === 0){
-                        return 'Processor not found';
+                        return JSON.stringify({error:'Processor not found'});
                     }else{
-                        return processors[0];
+                        return JSON.stringify(processors[0]);
                     }
                 }
             }
@@ -86,7 +89,10 @@ class ContractProcessors extends Contract{
                 }
                 if(processor.done){
                     await processorsIterator.close();
-                    return processors[0];
+                    if(processors.length === 0){
+                        return JSON.stringify({error:"Processornot found"});
+                    }
+                    return JSON.stringify(processors[0]);
                 }
             }
         }catch(err){
@@ -106,9 +112,9 @@ class ContractProcessors extends Contract{
                 if(processor.done){
                     await processorsIterator.close();
                     if(allProcessors.length === 0){
-                        return 'No proessors created';
+                        return JSON.stringify({error:'No processors created'});
                     }else{
-                        return allProcessors;
+                        return JSON.stringify({processors:allProcessors});
                     } 
                 }
             }
@@ -120,12 +126,12 @@ class ContractProcessors extends Contract{
     async getProcessorsByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const newValues = {}
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 1){
+                    newValues[element] = args[index+1];
                 }
-            })
+            })   
             const queryString = {
                 "selector":{
                     "docType":"processor",
@@ -141,7 +147,10 @@ class ContractProcessors extends Contract{
                 }
                 if(processor.done){
                     await processorsIterator.close();
-                    return processors;
+                    if(processors.length === 0){
+                        return JSON.stringify({error:"Processor not found"})
+                    }
+                    return JSON.stringify({processors});
                 }
             }
         }catch(err){
@@ -152,21 +161,22 @@ class ContractProcessors extends Contract{
     async updateProcessor(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
+            const processorId = args[1];
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 0 && index > 1){
+                    newValues[element] = args[index+1];
                 }
-            })
-            let processor = await this.getProcessorByEmail(ctx,currentEmail);
-            if(processor === 'Processor not found'){
+            });
+            let processor = await this.getProcessorById(ctx,processorId);
+            processor = JSON.parse(processor)
+            if(processor.error === 'Processor not found'){
                 return processor;
             }
             const updates = {...processor.processor,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteProcessor(ctx,processor.email);
+                await this.deleteProcessor(ctx,processorId);
                 const indexKey = `processor~email~processorId`;
                 key = await ctx.stub.createCompositeKey(indexKey,['processor',newValues.email,updates.processorId])
             }
@@ -174,19 +184,19 @@ class ContractProcessors extends Contract{
                 key = processor.key;
             }
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
-            return {key:key,processor:updates}
+            return JSON.stringify({key:key,processor:updates});
         }catch(err){
             return err;
         }
     }
 
-    async deleteProcessor(ctx,email){
-        const processor = await this.getProcessorByEmail(ctx,email);
-        if(processor === 'Processor not found'){
+    async deleteProcessor(ctx,processorId){
+        const processor = await this.getProcessorById(ctx,processorId);
+        if(JSON.parse(processor).error === 'Processor not found'){
             return processor;
         }
-        await ctx.stub.deleteState(processor.key);
-        return 'Deleted Successfully';
+        await ctx.stub.deleteState(JSON.parse(processor).key);
+        return JSON.strinfgify({message:'Deleted Successfully'});
     }
 
 }

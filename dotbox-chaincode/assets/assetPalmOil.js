@@ -3,7 +3,7 @@ const {v4:uuidv4} = require('uuid');
 
 class PalmOil{
     constructor(palmOil){
-        this.palmOilId=uuidv4();
+        this.palmOilId=palmOil.palmOilId;
         this.batchId = palmOil.batchId;
         this.componentProductIDs=palmOil.componentProductIDs;
         this.productionDate=palmOil.productionDate;
@@ -20,7 +20,7 @@ class PalmOil{
 
 class unitPalmOil{
     constructor(unit){
-        this.unitId = uuidv4();
+        this.unitId = unit.unitId;
         this.batchId = unit.batchId;
         this.location = unit.locationId;
         this.owner = unit.owner;
@@ -31,7 +31,7 @@ class unitPalmOil{
 
 class repackagedUnitPalmOil{
     constructor(unit){
-        this.repackagedId = uuidv4();
+        this.repackagedId = unit.repackagedId;
         this.componentIds = unit.componentIds;
         this.batchId = unit.batchId;
         this.volume = unit.volume;

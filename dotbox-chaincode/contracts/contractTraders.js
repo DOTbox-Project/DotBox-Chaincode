@@ -14,22 +14,24 @@ class ContractTraders extends Contract{
         console.log(this.TxId);
     }
 
-    async createTrader(ctx,name,storeName,storeLocation,email,contact,category){
-        const trader = {
-            name,
-            storeName,
-            storeLocation,
-            email,
-            contact,
-            category
-        }
+    async createTrader(ctx,traderId,name,storeName,storeLocation,contact,email,category,password){
         try{
             // instantiating a new trader
+            const trader = {
+                traderId,
+                name,
+                storeName,
+                storeLocation,
+                contact,
+                email,
+                category,
+                password
+            }
             const newTrader = new assetTrader(trader);
 
-            const doesTraderExist = await this.getTraderByEmail(ctx,email);
-            if (doesTraderExist !== 'Trader not found'){
-                return `Trader with email ${email} already exists`;
+            const doesTraderExist = await this.getTraderByEmail(ctx,trader.email);
+            if (JSON.parse(doesTraderExist).error !== 'Trader not found'){
+                return JSON.stringify({error:`Trader with email ${email} already exists`});
             }
             
             // creating a composite key
@@ -38,7 +40,8 @@ class ContractTraders extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newTrader)));
-            return {key:key,trader:newTrader};
+            delete trader.password;
+            return JSON.stringify({key:key,trader:trader});
         }catch(err){
             return err;
         }
@@ -60,9 +63,9 @@ class ContractTraders extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(traders.length === 0){
-                        return 'Trader not found';
+                        return JSON.stringify({error:'Trader not found'});
                     }else{
-                        return traders[0];
+                        return JSON.stringify(traders[0]);
                     }
                 }
             }
@@ -88,7 +91,10 @@ class ContractTraders extends Contract{
                 }
                 if(trader.done){
                     await tradersIterator.close();
-                    return traders[0];
+                    if(traders.length === 0){
+                        return JSON.stringify({error:"Trader not found"})
+                    }
+                    return JSON.stringify(traders[0]);
                 }
             }
         }catch(err){
@@ -112,9 +118,9 @@ class ContractTraders extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(traders.length === 0){
-                        return 'No traders created';
+                        return JSON.stringify({error:'No traders created'});
                     }else{
-                        return traders;
+                        return JSON.stringify({traders});
                     }
                 }
             }
@@ -126,12 +132,12 @@ class ContractTraders extends Contract{
     async getTradersByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const newValues = {}
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 1){
+                    newValues[element] = args[index+1];
                 }
-            })
+            });
             const queryString = {
                 "selector":{
                     "docType":"trader",
@@ -147,7 +153,10 @@ class ContractTraders extends Contract{
                 }
                 if(trader.done){
                     await tradersIterator.close();
-                    return traders;
+                    if(traders.length === 0){
+                        return JSON.stringify({error:"Trader not found"})
+                    }
+                    return JSON.stringify({traders});
                 }
             }
         }catch(err){
@@ -158,21 +167,22 @@ class ContractTraders extends Contract{
     async updateTrader(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
+            const traderId = args[1];
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 0 && index > 1){
+                    newValues[element] = args[index+1];
                 }
-            })
-            let trader = await this.getTraderByEmail(ctx,currentEmail);
-            if(trader === 'Trader not found'){
-                return trader;
+            });
+            let trader = await this.getTraderById(ctx,traderId);
+            trader = JSON.parse(trader);
+            if(trader.error === 'Trader not found'){
+                return JSON.stringify(trader);
             }
             const updates = {...trader.trader,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteConsumer(ctx,currentEmail);
+                await this.deleteConsumer(ctx,traderId);
                 const indexKey = `trader~email~traderId`;
                 key = await ctx.stub.createCompositeKey(indexKey,['trader',newValues.email,updates.traderId])
             }
@@ -180,20 +190,20 @@ class ContractTraders extends Contract{
                 key = trader.key;
             }
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
-            return {key:key,trader:updates}
+            return JSON.stringify({key:key,trader:updates});
         }catch(err){
             return err;
         }
     }
 
-    async deleteTrader(ctx,email){
+    async deleteTrader(ctx,traderId){
         try{
-            const trader = await this.getTraderByEmail(ctx,email);
-            if(trader === 'Trader not found'){
+            const trader = await this.getTraderById(ctx,traderId);
+            if(JSON.parse(trader).error === 'Trader not found'){
                 return trader;
             }
-            await ctx.stub.deleteState(trader.key);
-            return 'Deleted Successfully';
+            await ctx.stub.deleteState(JSON.parse(trader).key);
+            return JSON.stringify({message:'Deleted Successfully'});
         }catch(err){
             return err;
         }

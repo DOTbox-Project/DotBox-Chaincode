@@ -3,7 +3,7 @@ const {v4:uuidv4} = require('uuid')
 
 class FFB{
     constructor(ffb){
-        this.ffbId=uuidv4();
+        this.ffbId=ffb.ffbId;
         this.harvestTimestamp=ffb.harvestTimestamp;
         this.percentageRipe=ffb.percentageRipe;
         this.percentageDura=ffb.percentageDura;

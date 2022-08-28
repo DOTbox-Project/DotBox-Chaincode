@@ -14,21 +14,24 @@ class ContractProducers extends Contract{
         console.log(this.TxId);
     }
 
-    async createProducer(ctx,name,farmName,farmLocation,email,contact){
+    async createProducer(ctx,producerId,name,email,password,farmName,farmLocation,contact){
         const producer = {
+            producerId,
             name,
+            email,
+            password,
             farmName,
             farmLocation,
-            email,
             contact
         }
+       
         try{
             // instantiating a new producer
             const newProducer = new assetProducer(producer);
 
-            const doesProducerExist = await this.getProducerByEmail(ctx,email);
-            if (doesProducerExist !== 'Producer not found'){
-                return `Producer with email ${email} already exists`;
+            const doesProducerExist = await this.getProducerByEmail(ctx,producer.email);
+            if (JSON.parse(doesProducerExist).error !== 'Producer not found'){
+                return JSON.stringify({error:`Producer with email ${email} already exists`});
             }
             
             // creating a composite key
@@ -37,7 +40,8 @@ class ContractProducers extends Contract{
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newProducer)));
-            return JSON.stringify({key:key.toString('utf-8'),producer:newProducer});
+            delete producer.password;
+            return JSON.stringify({key:key,producer:producer});
         }catch(err){
             return err;
         }
@@ -59,9 +63,9 @@ class ContractProducers extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(producers.length === 0){
-                        return 'Producer not found';
+                        return JSON.stringify({error:'Producer not found'});
                     }else{
-                        return producers[0];
+                        return JSON.stringify(producers[0]);
                     }
                 }
             }
@@ -87,7 +91,10 @@ class ContractProducers extends Contract{
                 }
                 if(producer.done){
                     await producersIterator.close();
-                    return producers[0];
+                    if(producers.length === 0){
+                        return JSON.stringify({error:'Producer not found'});
+                    }
+                    return JSON.stringify(producers[0]);
                 }
             }
         }catch(err){
@@ -111,9 +118,9 @@ class ContractProducers extends Contract{
                 if(res.done){
                     await resultsIterator.close();
                     if(producers.length === 0){
-                        return 'No producers created';
+                        return JSON.stringify({error:'Producer not found'});;
                     }else{
-                        return producers;
+                        return JSON.stringify({producers});
                     }
                 }
             }
@@ -125,12 +132,12 @@ class ContractProducers extends Contract{
     async getProducersByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const newValues = {}
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=1 && index%2==1){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 1){
+                    newValues[element] = args[index+1];
                 }
-            })
+            })            
             const queryString = {
                 "selector":{
                     "docType":"producer",
@@ -146,7 +153,10 @@ class ContractProducers extends Contract{
                 }
                 if(producer.done){
                     await producersIterator.close();
-                    return producers;
+                    if(producers.length === 0){
+                        return JSON.stringify({error:'Producer not found'});
+                    }
+                    return JSON.stringify({producers});
                 }
             }
         }catch(err){
@@ -157,21 +167,22 @@ class ContractProducers extends Contract{
     async updateProducer(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const currentEmail = args[1];
-            const newValues = {}
+            const producerId = args[1];
+            const newValues = {};
             args.forEach((element,index)=>{
-                if(index>=2 && index%2==0){
-                    newValues[element] = args[index+1]
+                if(index % 2 === 0 && index > 1){
+                    newValues[element] = args[index+1];
                 }
-            })
-            let producer = await this.getProducerByEmail(ctx,currentEmail);
-            if(producer === 'Producer not found'){
-                return producer;
+            })     
+            let producer = await this.getProducerById(ctx,producerId);
+            producer = JSON.parse(producer);
+            if(producer.error === 'Producer not found'){
+                return JSON.stringify(producer);
             }
             const updates = {...producer.producer,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteProducer(ctx,currentEmail);
+                await this.deleteProducer(ctx,producerId);
                 const indexKey = `producer~email~producerId`;
                 key = await ctx.stub.createCompositeKey(indexKey,['producer',newValues.email,updates.producerId])
             }
@@ -179,20 +190,20 @@ class ContractProducers extends Contract{
                 key = producer.key;
             }
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
-            return {key:key,producer:updates}
+            return JSON.stringify({key:key,producer:updates})
         }catch(err){
             return err;
         }
     }
 
-    async deleteProducer(ctx,email){
+    async deleteProducer(ctx,producerId){
         try{
-            const producer = await this.getProducerByEmail(ctx,email);
-            if(producer === 'Producer not found'){
+            const producer = await this.getProducerById(ctx,producerId);
+            if(JSON.parse(producer).error === 'Producer not found'){
                 return producer;
             }
-            await ctx.stub.deleteState(producer.key);
-            return 'Deleted Successfully';
+            await ctx.stub.deleteState(JSON.parse(producer).key);
+            return JSON.stringify({message:'Deleted Successfully'});
         }catch(err){
             return err;
         }
