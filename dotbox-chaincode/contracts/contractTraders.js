@@ -3,18 +3,19 @@
 const assetTrader = require('../assets/assetTrader');
 const {Contract} = require('fabric-contract-api');
 
+function traders(Contract){
 class ContractTraders extends Contract{
     constructor(){
         super('ContractTraders');
         this.TxId = '';
     }
     
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
-    async createTrader(ctx,traderId,name,storeName,storeLocation,contact,email,category,password){
+     async createTrader(ctx,traderId,name,storeName,storeLocation,contact,email,category,password){
         try{
             // instantiating a new trader
             const trader = {
@@ -47,7 +48,7 @@ class ContractTraders extends Contract{
         }
     }
 
-    async getTraderByEmail(ctx,email){
+     async getTraderByEmail(ctx,email){
         try{
             // collect the keys
             let keys = ['trader',email];
@@ -74,7 +75,7 @@ class ContractTraders extends Contract{
         }
     }
 
-    async getTraderById(ctx,traderId){
+     async getTraderById(ctx,traderId){
         try{
             const queryString = {
                 "selector":{
@@ -102,7 +103,7 @@ class ContractTraders extends Contract{
         }
     }
 
-    async getAllTraders(ctx){
+     async getAllTraders(ctx){
         try{
             // collect the keys
             let keys = ['trader'];
@@ -129,7 +130,7 @@ class ContractTraders extends Contract{
         }
     }
 
-    async getTradersByQueryParams(ctx){
+     async getTradersByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const newValues = {};
@@ -164,7 +165,7 @@ class ContractTraders extends Contract{
         }
     }
 
-    async updateTrader(ctx){
+     async updateTrader(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const traderId = args[1];
@@ -196,7 +197,7 @@ class ContractTraders extends Contract{
         }
     }
 
-    async deleteTrader(ctx,traderId){
+     async deleteTrader(ctx,traderId){
         try{
             const trader = await this.getTraderById(ctx,traderId);
             if(JSON.parse(trader).error === 'Trader not found'){
@@ -209,5 +210,6 @@ class ContractTraders extends Contract{
         }
     }
 }
-
-module.exports = ContractTraders;
+return ContractTraders
+}
+module.exports = traders;

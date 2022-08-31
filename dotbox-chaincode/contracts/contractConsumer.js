@@ -3,18 +3,19 @@
 const assetConsumer = require('../assets/assetConsumer');
 const {Contract} = require('fabric-contract-api');
 
+function consumers(Contract){
 class ContractConsumers extends Contract{
     constructor(){
         super('ContractConsumers');
         this.TxId = '';
     }
     
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
-    async createConsumer(ctx,consumerId,name,email,contact,password){
+     async createConsumer(ctx,consumerId,name,email,contact,password){
         try{
             // instantiating a new consumer
             const consumer = {
@@ -44,7 +45,7 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getConsumerByEmail(ctx,email){
+     async getConsumerByEmail(ctx,email){
         try{
             // collect the keys
             let keys = ['consumer',email];
@@ -71,7 +72,7 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getAllConsumers(ctx){
+     async getAllConsumers(ctx){
         try{
             // collect the keys
             let keys = ['consumer'];
@@ -98,7 +99,7 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getConsumerById(ctx,consumerId){
+     async getConsumerById(ctx,consumerId){
         try{
             const queryString = {
                 "selector":{
@@ -126,7 +127,7 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async getConsumersByQueryParams(ctx){
+     async getConsumersByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const newValues = {};
@@ -161,7 +162,7 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async updateConsumer(ctx){
+     async updateConsumer(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const consumerId = args[1];
@@ -193,7 +194,7 @@ class ContractConsumers extends Contract{
         }
     }
 
-    async deleteConsumer(ctx,consumerId){
+     async deleteConsumer(ctx,consumerId){
         try{
             const consumer = await this.getConsumerById(ctx,consumerId);
             if(JSON.parse(consumer).error === 'Consumer not found'){
@@ -207,4 +208,6 @@ class ContractConsumers extends Contract{
     }
 }
 
-module.exports = ContractConsumers;
+    return ContractConsumers
+}
+module.exports = consumers;
