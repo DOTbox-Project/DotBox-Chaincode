@@ -3,18 +3,19 @@
 const assetRegulator = require('../assets/assetRegulator');
 const {Contract} = require('fabric-contract-api');
 
+function regulators(Contract){
 class ContractRegulators extends Contract{
     constructor(){
         super('ContractRegulators');
         this.TxId = '';
     }
     
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
-    async createRegulator(ctx,regulatorId,name,contact,email,location,password){
+     async createRegulator(ctx,regulatorId,name,contact,email,location,password){
         try{
             // instantiating a new regulator
             const regulator = {
@@ -45,7 +46,7 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async getRegulatorByEmail(ctx,email){
+     async getRegulatorByEmail(ctx,email){
         try{
             // collect the keys
             let keys = ['regulator',email];
@@ -72,7 +73,7 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async getRegulatorById(ctx,regulatorId){
+     async getRegulatorById(ctx,regulatorId){
         try{
             const queryString = {
                 "selector":{
@@ -100,7 +101,7 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async getAllRegulators(ctx){
+     async getAllRegulators(ctx){
         try{
             // collect the keys
             let keys = ['regulator'];
@@ -127,7 +128,7 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async getRegulatorsByQueryParams(ctx){
+     async getRegulatorsByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const newValues = {};
@@ -162,7 +163,7 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async updateRegulator(ctx){
+     async updateRegulator(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const regulatorId = args[1];
@@ -194,7 +195,7 @@ class ContractRegulators extends Contract{
         }
     }
 
-    async deleteRegulator(ctx,regulatorId){
+     async deleteRegulator(ctx,regulatorId){
         try{
             const regulator = await this.getRegulatorById(ctx,regulatorId);
             if(JSON.parse(regulator).error === 'Regulator not found'){
@@ -207,5 +208,6 @@ class ContractRegulators extends Contract{
         }
     }
 }
-
-module.exports = ContractRegulators;
+return ContractRegulators
+}
+module.exports = regulators;

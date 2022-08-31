@@ -5,7 +5,7 @@ class PalmOil{
     constructor(palmOil){
         this.palmOilId=palmOil.palmOilId;
         this.batchId = palmOil.batchId;
-        this.componentProductIDs=palmOil.componentProductIDs;
+        this.componentProductIds=palmOil.componentProductIds;
         this.productionDate=palmOil.productionDate;
         this.expirationDate=palmOil.expirationDate;
         this.unitType=palmOil.unitType;

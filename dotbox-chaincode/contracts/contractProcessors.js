@@ -1,18 +1,20 @@
 'use strict';
 const {Contract} = require('fabric-contract-api');
 const assetProcessors = require('../assets/assetProcessor')
+
+function processors(Contract){
 class ContractProcessors extends Contract{
     constructor(){
         super('ContractProcessors');
         this.TxId = '';
     }
 
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
-    async createProcessor(ctx,processorId,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities,password){
+     async createProcessor(ctx,processorId,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities,password){
         try{
             const processor = {
                 processorId,
@@ -45,7 +47,7 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async getProcessorByEmail(ctx,email){
+     async getProcessorByEmail(ctx,email){
         try{
             // collect the keys
             let keys = ['processor',email];
@@ -72,7 +74,7 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async getProcessorById(ctx,processorId){
+     async getProcessorById(ctx,processorId){
         try{
             const queryString = {
                 "selector":{
@@ -100,7 +102,7 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async getAllProcessors(ctx){
+     async getAllProcessors(ctx){
         try{
             const allProcessors = [];
             let processorsIterator = await ctx.stub.getStateByPartialCompositeKey('processor~email~processorId',['processor']);
@@ -123,7 +125,7 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async getProcessorsByQueryParams(ctx){
+     async getProcessorsByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const newValues = {};
@@ -158,7 +160,7 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async updateProcessor(ctx){
+     async updateProcessor(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const processorId = args[1];
@@ -190,15 +192,16 @@ class ContractProcessors extends Contract{
         }
     }
 
-    async deleteProcessor(ctx,processorId){
+     async deleteProcessor(ctx,processorId){
         const processor = await this.getProcessorById(ctx,processorId);
         if(JSON.parse(processor).error === 'Processor not found'){
             return processor;
         }
         await ctx.stub.deleteState(JSON.parse(processor).key);
-        return JSON.strinfgify({message:'Deleted Successfully'});
+        return JSON.stringify({message:'Deleted Successfully'});
     }
 
 }
-
-module.exports = ContractProcessors;
+return ContractProcessors
+}
+module.exports = processors;

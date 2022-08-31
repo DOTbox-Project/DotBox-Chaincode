@@ -5,26 +5,27 @@ const { checkProcessorExistsById } = require('../utils/processorUtils');
 const {checkRegulatorExistsById} =require('../utils/regulatorUtils')
 const {Contract} = require('fabric-contract-api');
 
+function palmOil(Contract){
 class ContractPalmOil extends Contract{
     constructor(){
         super('ContractPalmOil');
         this.TxId = '';
     }
 
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = await ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
     // Palm Oil Batch
 
-    async createPalmOilBatch(ctx){
+     async createPalmOilBatch(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const params = args.map(element=>element);
             const palmOil = {
                 batchId:params[1],
-                componentProductIDs:params[2],
+                componentProductIds:params[2],
                 productionDate:params[3],
                 expirationDate:params[4],
                 unitType:params[5],
@@ -36,9 +37,9 @@ class ContractPalmOil extends Contract{
             const newPalmOilBatch = new assetPalmOil(palmOil);
             const processor = await checkProcessorExistsById(palmOil.producedBy);
             if(processor === 'Processor not found'){
-                return processor;
+                return JSON.stringify({error:processor});
             }
-            const ffbExists = componentProductIDs.split(',').forEach(async(component)=>{
+            const ffbExists = componentProductIds.split(',').forEach(async(component)=>{
                 const ffb = await checkFFBExistsById(component);
                 if(ffb === 'No ffb found'){
                     return 0;
@@ -46,7 +47,7 @@ class ContractPalmOil extends Contract{
                 return 1;
             })
             if(ffbExists.some(0)){
-                return 'FFBs used to create palm oil do not exist';
+                return JSON.stringify({error:'FFBs used to create palm oil do not exist'});
             }
             // Create a new palm oil batch
             const indexKey = 'palmoil~processorId~palmOilId';
@@ -63,13 +64,13 @@ class ContractPalmOil extends Contract{
                 counter = counter + 1;
             }
 
-            return newPalmOilBatch;
+            return JSON.stringify({key:key,palmOilBatch:newPalmOilBatch});
         }catch(err){
             return err;
         }
     }
 
-    async getPalmOilByProcessorId(ctx,processorId){
+     async getPalmOilByProcessorId(ctx,processorId){
         try{
             const queryString = {
                 selector:{
@@ -88,9 +89,9 @@ class ContractPalmOil extends Contract{
                 if(palmOil.done){
                     await palmOilIterator.close();
                     if(palmOilBatches.length === 0){
-                        return 'No palm Oil produced by processor';
+                        return JSON.stringify({error:'No palm Oil produced by processor'});
                     }
-                    return palmOilBatches;
+                    return JSON.stringify({palmOilBatches});
                 }
             }
         }catch(err){
@@ -98,7 +99,7 @@ class ContractPalmOil extends Contract{
         }
     }
 
-    async getPalmOilByBatchId(ctx,batchId){
+     async getPalmOilByBatchId(ctx,batchId){
         try{
             const queryString = {
                 selector:{
@@ -117,9 +118,9 @@ class ContractPalmOil extends Contract{
                 if(palmOil.done){
                     await palmOilIterator.close();
                     if(palmOilBatches.length === 0){
-                        return 'Palm Oil Batch not found';
+                        return JSON.stringify({error:'Palm Oil Batch not found'});
                     }
-                    return palmOilBatches[0];
+                    return JSON.stringify(palmOilBatches[0]);
                 }
             }
         }catch(err){
@@ -127,7 +128,7 @@ class ContractPalmOil extends Contract{
         }
     }
 
-    async updatePalmOilBatchById(ctx){
+     async updatePalmOilBatchById(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const palmOilBatchId = args[1];
@@ -138,38 +139,39 @@ class ContractPalmOil extends Contract{
                 }
             })
 
-            const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
-            if(palmOilBatch === 'Palm Oil Batch not found'){
+            let palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            if(JSON.parse(palmOilBatch.toString()).error === 'Palm Oil Batch not found'){
                 return palmOilBatch;
             }
+            palmOilBatch = JSON.parse(palmOilBatch.toString())
             const updates = {
                 ...palmOilBatch.palmOilBatch,
                 ...newValues
             }
             await ctx.stub.putState(palmOilBatch.key,Buffer.from(JSON.stringify(updates)));
-            return {key:palmOilBatch.key,palmOilBatch:updates};
+            return JSON.stringify({key:palmOilBatch.key,palmOilBatch:updates});
         }catch(err){
             return err;
         }
     }
 
-    async deletePalmOilBatchById(ctx,palmOilBatchId){
+     async deletePalmOilBatchById(ctx,palmOilBatchId){
         try{
             const palmOil = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
-            if(palmOil === 'Palm Oil Batch not found'){
+            if(JSON.parse(palmOil).error === 'Palm Oil Batch not found'){
                 return palmOil;
             }
             await ctx.stub.deleteState(palmOil.key);
-            return "Deleted Successfully";
+            return JSON.stringify({error:"Deleted Successfully"});
         }catch(err){
             return err;
         }
     }
 
-    async getPalmOilBatchHistoryByBatchId(ctx,palmOilBatchId){
+     async getPalmOilBatchHistoryByBatchId(ctx,palmOilBatchId){
         try{
             const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
-            if(palmOilBatch === 'Palm Oil Batch not found'){
+            if(JSON.parse(palmOilBatch).error === 'Palm Oil Batch not found'){
                 return palmOilBatch;
             }
             let historyIterator = await ctx.stub.getHistoryForKey(palmOilBatch.key);
@@ -183,7 +185,7 @@ class ContractPalmOil extends Contract{
                 }
                 if(history.done){
                     await historyIterator.close();
-                    return historyRes
+                    return JSON.stringify(historyRes)
                 }
             }
         }catch(err){
@@ -193,15 +195,16 @@ class ContractPalmOil extends Contract{
 
     // Unit Palm Oil
 
-    async createUnitPalmOil(ctx,batchId,location,owner,volume){
+     async createUnitPalmOil(ctx,unitId,batchId,locationId,owner,volume){
         try{
             const palmOil = await this.getPalmOilByBatchId(ctx,batchId);
-            if(palmOil === 'Palm Oil Batch not found'){
+            if(JSON.parse(palmOil.toString()).error === 'Palm Oil Batch not found'){
                 return palmOil;
             }
             const unitPalmOil = {
+                unitId,
                 batchId,
-                location,
+                locationId,
                 owner,
                 volume,
             }
@@ -209,14 +212,14 @@ class ContractPalmOil extends Contract{
             const newUnitPalmOil = new assetUnitPalmOil(unitPalmOil);
             const key = await ctx.createCompositeKey('unitpalmoil~palmoilbatch~unitpalmoilId',['unitpalmoil',newUnitPalmOil.batchId,newUnitPalmOil.unitId]);
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newUnitPalmOil)));
-            return newUnitPalmOil;
+            return JSON.stringify({key:key,unitPalmOil:newUnitPalmOil});
 
         }catch(err){
             return err;
         }
     }
 
-    async getUnitPalmOilById(ctx,unitPalmOilId){
+     async getUnitPalmOilById(ctx,unitPalmOilId){
         try{
             const queryString = {
                 selector:{
@@ -234,10 +237,37 @@ class ContractPalmOil extends Contract{
                 }
                 if(unitPalmOil.done){
                     await unitPalmOilIterator.close();
-                    if(unitPalmOilList.length===0){
-                        return "No unit palm oil found";
+                    return JSON.stringify({error:"No unit palm oil found"});
                     }
-                    return unitPalmOilList[0];
+                    return JSON.stringify(unitPalmOilList[0]);
+                }
+        }catch(err){
+            return err;
+        }
+    }
+
+     async getAllUnitPalmOilByBatchId(ctx,batchId){
+        try{
+            const queryString = {
+                selector:{
+                    batchId,
+                    docType:'unitPalmOil'
+                }
+            }
+
+            let unitPalmOilIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const allUnitPalmOil = [];
+            while(true){
+                let unitPalmOil = await unitPalmOilIterator.next();
+                if(unitPalmOil.value){
+                    allUnitPalmOil.push({key:unitPalmOil.value.key,unitPalmOil:JSON.parse(unitPalmOil.value.value.toString('utf-8'))})
+                }
+                if(unitPalmOilIterator.done){
+                    await unitPalmOilIterator.close();
+                    if(allUnitPalmOil.length === 0){
+                        return JSON.stringify({error:'No unit palm oil found'})
+                    }
+                    return JSON.stringify(allUnitPalmOil);
                 }
             }
         }catch(err){
@@ -245,7 +275,7 @@ class ContractPalmOil extends Contract{
         }
     }
 
-    async updateUnitPalmOilById(ctx){
+     async updateUnitPalmOilById(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const unitPalmOilId = args[1];
@@ -256,56 +286,59 @@ class ContractPalmOil extends Contract{
                 }
             })
 
-            const unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
-            if(unitPalmOil === 'No unit palm oil found'){
+            let unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
+            if(JSON.parse(unitPalmOil.toString()).error === 'No unit palm oil found'){
                 return unitPalmOil;
             }
+            unitPalmOil = JSON.parse(unitPalmOil.toString())
             const updates = {
                 ...unitPalmOil.unitPalmOil,
                 ...newValues
             }
             await ctx.stub.putState(unitPalmOil.key,Buffer.from(JSON.stringify(updates)));
-            return {key:unitPalmOil.key,unitPalmOil:updates};
+            return JSON.stringify({key:unitPalmOil.key,unitPalmOil:updates});
         }catch(err){
             return err;
         }
     }
 
-    async deleteUnitPalmOilById(ctx,unitPalmOilId){
+     async deleteUnitPalmOilById(ctx,unitPalmOilId){
         try{
-            const unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
-            if(unitPalmOil === 'No unit palm oil found'){
+            let unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
+            if(JSON.parse(unitPalmOil).error === 'No unit palm oil found'){
                 return unitPalmOil;
             }
+            unitPalmOil = JSON.parse(unitPalmOil.toString())
             await ctx.stub.deleteState(unitPalmOil.key);
-            return "Deleted successfully"
+            return JSON.stringify({message:"Deleted successfully"})
         }catch(err){
             return err;
         }
     }
 
     // Change Palm Oil Unit Owner
-    async changePalmOilUnitOwner(ctx,unitPalmOilId,oldOwnerId,newOwnerId){
+     async changePalmOilUnitOwner(ctx,unitPalmOilId,oldOwnerId,newOwnerId){
         try{
-            const palmOilUnit = await this.getUnitPalmOilById(ctx,unitPalmOilId);
-            if(palmOilUnit === 'No unit palm oil found'){
+            let palmOilUnit = await this.getUnitPalmOilById(ctx,unitPalmOilId);
+            if(JSON.parse(palmOilUnit).error === 'No unit palm oil found'){
                 return palmOilUnit;
             }
+            palmOilUnit = JSON.parse(palmOilUnit.toString());
             if(palmOilUnit.unitPalmOil.owner === oldOwnerId){
                 palmOilUnit.unitPalmOil.owner = newOwnerId;
                 await ctx.stub.putState(palmOilUnit.key,Buffer.from(JSON.stringify(palmOilUnit.unitPalmOil)))
-                return {key:palmOilUnit.key,unitPalmOil:palmOilUnit.unitPalmOil};
+                return JSON.stringify({key:palmOilUnit.key,unitPalmOil:palmOilUnit.unitPalmOil});
             }
-            return "You are not the previous owner";
+            return JSON.stringify({error:"You are not the previous owner"});
         }catch(err){
             return err;
         }
     }
 
-    async getUnitPalmOilHistoryById(ctx,unitPalmOilId){
+     async getUnitPalmOilHistoryById(ctx,unitPalmOilId){
         try{
             const unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
-            if(unitPalmOil === 'No unit palm oil found'){
+            if(JSON.parse(unitPalmOil).error === 'No unit palm oil found'){
                 return unitPalmOil;
             }
             let historyIterator = await ctx.stub.getHistoryForKey(unitPalmOil.key);
@@ -329,53 +362,59 @@ class ContractPalmOil extends Contract{
 
     // Palm Oil Location Data
 
-    async createPalmOilLocationData(ctx,location){
+     async createPalmOilLocationData(ctx,location){
         try{
             // Create a new location entry
             const newLocation = new assetProductionLocationData(location);
             await ctx.stub.putState(newLocation.locationId,Buffer,from(JSON.stringify(newLocation)));
-            return newLocation;
+            return JSON.stringify({key:newLocation.locationId,location:newLocation});
         }catch(err){
             return err;
         }
     }
 
-    async getPalmOilLocationData(ctx,locationId){
+     async getPalmOilLocationData(ctx,locationId){
         try{
             const locationAsByte = await ctx.stub.getState(locationId);
             if(!locationAsByte || locationAsByte.length === 0){
-                return 'location not found';
+                return JSON.stringify({error:'location not found'});
             }
             const location = JSON.parse(locationAsByte.toString('utf-8'));
-            return {key:location.locationId,locationData:location};
+            return JSON.stringify({key:location.locationId,locationData:location});
         }catch(err){
             return err;
         }
     }
 
-    async changePalmOilLocation(ctx,unitPalmOilId,newLocation){
+     async changePalmOilLocation(ctx,unitPalmOilId,newLocation){
         try{
-            const unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
-            if(unitPalmOil === 'No unit palm oil found'){
+            let unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
+            if(JSON.parse(unitPalmOil.toString()).error === 'No unit palm oil found'){
                 return unitPalmOil;
             }
-            const currentLocationData = await this.getPalmOilLocationData(ctx,unitPalmOil.location);
+            unitPalmOil = JSON.parse(unitPalmOil.toString());
+            let currentLocationData = await this.getPalmOilLocationData(ctx,unitPalmOil.location);
+            currentLocationData = JSON.parse(currentLocationData.toString());
             currentLocationData.locationData.previousLocations = currentLocationData.locationData.previousLocations.split(',').push(currentLocationData.locationData.currentLocation).join(",");
             currentLocationData.locationData.currentLocation = newLocation;
             await ctx.stub.putState(currentLocationData.key,Buffer.from(JSON.stringify(currentLocationData.locationData)));
-            return {key:currentLocationData.key,locationData:currentLocationData.locationData};
+            return JSON.stringify({key:currentLocationData.key,locationData:currentLocationData.locationData});
         }catch(err){
             return err;
         }
     }
 
-    async removeLocationFromPalmOilLocationData(ctx,unitPalmOilId,location){
+     async removeLocationFromPalmOilLocationData(ctx,unitPalmOilId,location){
         try{
-            const unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
-            if(unitPalmOil === 'No unit palm oil found'){
+            let unitPalmOil = await this.getUnitPalmOilById(ctx,unitPalmOilId);
+            if(JSON.parse(unitPalmOil).error === 'No unit palm oil found'){
                 return unitPalmOil;
             }
-            const currentLocationData = await this.getPalmOilLocationData(ctx,unitPalmOil.location);
+            unitPalmOil = JSON.parse(unitPalmOil.toString());
+            
+            let currentLocationData = await this.getPalmOilLocationData(ctx,unitPalmOil.location);
+            currentLocationData = JSON.parse(currentLocationData.toString());
+            
             if(currentLocationData.locationData.currentLocation === location){
                 const locationData = currentLocationData.locationData;
                 const previousLocations = locationData.previousLocations.split(',');
@@ -383,16 +422,17 @@ class ContractPalmOil extends Contract{
                 previousLocations.splice(previousLocations.length - 1,1);
                 locationData.previousLocations = previousLocations.join(',');
                 await ctx.stub.putState(currentLocationData.key,Buffer.from(JSON.stringify(locationData)));
-                return {key:currentLocationData.key,locationData:locationData};
+                return JSON.stringify({key:currentLocationData.key,locationData:locationData});
             }
             currentLocationData.locationData.previousLocations = currentLocationData.locationData.previousLocations.split(',').filter(locationData => locationData !== location).join(',');
             await ctx.stub.putState(currentLocationData.key,Buffer.from(JSON.stringify(currentLocationData.locationData)));
+            return JSON.stringify({key:currentLocationData.key,locationData:currentLocationData.locationData});
         }catch(err){
             return err;
         }
     }
 
-    async getLocationHistoryById(ctx,locationId){
+     async getLocationHistoryById(ctx,locationId){
         try{
             const locationData = await this.getPalmOilLocationData(ctx,locationId);
             if(locationData === 'location not found'){
@@ -417,7 +457,7 @@ class ContractPalmOil extends Contract{
         }
     }
     // Palm Oil Test Data
-    async createPalmOilTestEntry(ctx){
+     async createPalmOilTestEntry(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const params = args.map(element=>element);
@@ -436,17 +476,17 @@ class ContractPalmOil extends Contract{
             const regulator = await checkRegulatorExistsById(ctx,testEntry.organization);
 
             if(processor === 'Processor not found' && regulator === 'Regulator not found'){
-                return "Test Organization is neither a Processor nor Regulator";
+                return JSON.stringify({error:"Test Organization is neither a Processor nor Regulator"});
             }
         
             await ctx.stub.putState(newTestEntry.testId,Buffer.from(JSON.stringify(newTestEntry)));
-            return newTestEntry;
+            return JSON.stringify({key:newTestEntry.testId,testEntry:newTestEntry});
         }catch(err){
             return err;
         }
     }
 
-    async getPalmOilTestEntryById(ctx,palmOilTestEntryId){
+     async getPalmOilTestEntryById(ctx,palmOilTestEntryId){
         try{
             const queryString = {
                 selector:{
@@ -465,9 +505,9 @@ class ContractPalmOil extends Contract{
                 if(test.done){
                     await testIterator.close();
                     if(tests.length === 0){
-                        return 'Test entry not found';
+                        return JSON.stringify({error:'Test entry not found'});
                     }
-                    return tests[0];
+                    return JSON.stringify(tests[0]);
                 }
             }
         }catch(err){
@@ -475,7 +515,7 @@ class ContractPalmOil extends Contract{
         }
     }
 
-    async getPalmOilTestEntryByOrganizationId(ctx,organizationId){
+     async getPalmOilTestEntryByOrganizationId(ctx,organizationId){
         try{
             const queryString = {
                 selector:{
@@ -494,9 +534,9 @@ class ContractPalmOil extends Contract{
                 if(test.done){
                     await testIterator.close();
                     if(tests.length === 0){
-                        return 'Test entry not found';
+                        return JSON.stringify({error:'Test entry not found'});
                     }
-                    return tests[0];
+                    return JSON.stringify({tests});
                 }
             }
         }catch(err){
@@ -504,7 +544,7 @@ class ContractPalmOil extends Contract{
         }
     }
 
-    async updatePalmOilTestEntryById(ctx){
+     async updatePalmOilTestEntryById(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const palmOilTestEntryId = args[1];
@@ -515,44 +555,52 @@ class ContractPalmOil extends Contract{
                 }
             })
 
-            const testEntry = await this.getPalmOilTestEntryById(ctx,palmOilTestEntryId);
-            if(testEntry === 'Test entry not found'){
+            let testEntry = await this.getPalmOilTestEntryById(ctx,palmOilTestEntryId);
+            if(JSON.parse(testEntry).error === 'Test entry not found'){
                 return testEntry;
             }
+            testEntry = JSON.parse(testEntry.toString());
             const updates = {
                 ...testEntry.test,
                 ...newValues
             }
             await ctx.stub.putState(testEntry.key,Buffer.from(JSON.stringify(updates)));
-            return {key:testEntry.key,test:updates};
+            return JSON.stringify({key:testEntry.key,test:updates});
         }catch(err){
             return err;
         }
     }
 
-    async addTestToPalmOilBatch(ctx,palmOilBatchId,testEntryId){
+     async addTestToPalmOilBatch(ctx,palmOilBatchId,testEntryId){
         try{
-            const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
-            if(palmOilBatch === 'Palm Oil Batch not found'){
+            let palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            if(JSON.parse(palmOilBatch.toString()).error === 'Palm Oil Batch not found'){
                 return palmOilBatch;
             }
-            const testEntry = await this.getPalmOilTestEntryById(ctx,testEntryId);
-            if(testEntry === 'Test entry not found'){
+            let testEntry = await this.getPalmOilTestEntryById(ctx,testEntryId);
+            if(JSON.parse(testEntry.toString()).error === 'Test entry not found'){
                 return testEntry;
             }
+
+            palmOilBatch = JSON.parse(palmOilBatch.toString());
+            testEntry = JSON.parse(testEntry.toString());
+
             palmOilBatch.palmOilBatch.productTest = palmOilBatch.palmOilBatch.productTest.split(',').push(testEntryId).join(',');
             await ctx.stub.putState(palmOilBatch.key,Buffer.from(JSON.stringify(palmOilBatch.palmOilBatch)));
+            return JSON.stringify(palmOilBatch);
         }catch(err){
             return err;
         }
     }
 
-    async removeTestFromPalmOilBatch(ctx,palmOilBatchId,testEntryId,organizationId){
+     async removeTestFromPalmOilBatch(ctx,palmOilBatchId,testEntryId,organizationId){
         try{
-            const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
-            if(palmOilBatch === 'Palm Oil Batch not found'){
+            let palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            if(JSON.parse(palmOilBatch.toString()).error === 'Palm Oil Batch not found'){
                 return palmOilBatch;
             }
+
+            palmOilBatch = JSON.parse(palmOilBatch.toString())
             const queryString = {
                 selector:{
                     docType:"testEntry",
@@ -571,25 +619,26 @@ class ContractPalmOil extends Contract{
                 if(testEntry.done){
                     await testEntryIterator.close();
                     if(test.length === 0){
-                        return "Test entry not found"
+                        return JSON.stringify({error:"Test entry not found"});
                     }
                     break;
                 }
             }
             palmOilBatch.palmOilBatch.productTest = palmOilBatch.palmOilBatch.productTest.split(',').filter(id=>id !== testEntryId).join(',');
             await ctx.stub.putState(palmOilBatch.key,palmOilBatch);
-            return palmOilBatch;
+            return JSON.stringify(palmOilBatch);
         }catch(err){
             return err;
         }
     }
 
-    async getPalmOilTestEntryHistory(ctx,testEntryId){
+     async getPalmOilTestEntryHistory(ctx,testEntryId){
         try{
-            const testEntry = await this.getPalmOilTestEntryById(ctx,testEntryId);
-            if(testEntry === 'Test entry not found'){
+            let testEntry = await this.getPalmOilTestEntryById(ctx,testEntryId);
+            if(JSON.parse(testEntry.toString()).error === 'Test entry not found'){
                 return testEntry;
             }
+            testEntry = JSON.parse(testEntry.toString());
             let historyIterator = await ctx.stub.getHistoryForKey(testEntry.key);
             const historyRes = {};
             while(true){
@@ -601,7 +650,7 @@ class ContractPalmOil extends Contract{
                 }
                 if(history.done){
                     await historyIterator.close();
-                    return historyRes
+                    return JSON.stringify(historyRes)
                 }
             }
         }catch(err){
@@ -610,7 +659,7 @@ class ContractPalmOil extends Contract{
     }
 
     // Palm Oil Approval
-    async approvePalmOilBatch(ctx,palmOilBatchId,regulatorId){
+     async approvePalmOilBatch(ctx,palmOilBatchId,regulatorId){
         try{
             const queryString = {
                 selector:{
@@ -630,37 +679,39 @@ class ContractPalmOil extends Contract{
                 if(test.done){
                     await testEntryIterator.close();
                     if(testEntry.length === 0){
-                         return "An approval can't be made without a valid test";
+                         return JSON.stringify({error:"An approval can't be made without a valid test"});
                     }
                     break;
                 }
             }
 
-            const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            let palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            palmOilBatch = JSON.parse(palmOilBatch.toString())
             palmOilBatch.palmOilBatch.approvedBy = palmOil.palmOilBatch.approvedBy.split(',').push(regulatorId).join(',');
             await ctx.putState(palmOilBatch.key,palmOilBatch.palmOilBatch);
-            return palmOilBatch;
+            return JSON.stringify(palmOilBatch);
         }catch(err){
             return err;
         }
     }
 
-    async removeApprovalFromPalmOilBatch(ctx,palmOilBatchId,regulatorId){
+     async removeApprovalFromPalmOilBatch(ctx,palmOilBatchId,regulatorId){
         try{
-            const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
-            if(palmOilBatch === 'Palm Oil Batch not found'){
+            let palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            if(JSON.parse(palmOilBatch.toString()).error === 'Palm Oil Batch not found'){
                 return palmOilBatch;
             }
+            palmOilBatch = JSON.parse(palmOilBatch.toString())
             palmOilBatch.palmOilBatch.approvedBy = palmOilBatch.palmOilBatch.approvedBy.split(',').filter(id=>id !== regulatorId).join(',');
             await ctx.putState(palmOilBatch.key,palmOilBatch.palmOilBatch);
-            return palmOilBatch;
+            return JSON.stringify(palmOilBatch);
         }catch(err){
             return err;
         }
     }
 
     // Repackaging Palm Oil
-    async createRepackagedUnitPalmOil(ctx,batchId,componentIds,volume,locationId,owner){
+     async createRepackagedUnitPalmOil(ctx,batchId,componentIds,volume,locationId,owner){
         try{
             const repackagedUnit = {
                 componentIds:componentIds,
@@ -669,30 +720,42 @@ class ContractPalmOil extends Contract{
                 locationId:locationId,
                 owner:owner
             }
+            const componentExists = []
+            repackagedUnit.componentIds.split(',').forEach(async(element)=>{
+                const unitPalmOil = await this.getUnitPalmOilById(ctx,element);
+                if(JSON.parse(unitPalmOil).error){
+                   componentExists.push(0);
+                }else{
+                    componentExists.push(1);
+                }
+            })
 
+            if(componentExists.some(0)){
+                return JSON.stringify({error:"Some components are not valid unit palm oil"});
+            }
             const newRepackagedUnit = new assetRepackagedUnitPalmOil(repackagedUnit);
             await ctx.putState(newRepackagedUnit.repackagedId,Buffer.from(JSON.stringify(newRepackagedUnit)));
 
-            return {key:newRepackagedUnit.repackagedId,repackagedUnitnewRepackagedUnit};
+            return JSON.stringify({key:newRepackagedUnit.repackagedId,repackagedUnitnewRepackagedUnit});
         }catch(err){
             return err;
         }
     }
 
-    async getRepackagedUnitPalmOilById(ctx,repackagedUnitId){
+     async getRepackagedUnitPalmOilById(ctx,repackagedUnitId){
         try{
             const repackagedUnitAsByte = await ctx.stub.getState(repackagedUnitId);
             if(!repackagedUnitAsByte || repackagedUnitAsByte.length === 0){
-                return 'Repackaged unit not found';
+                return JSON.stringify({error:'Repackaged unit not found'});
             }
             const repackagedUnit = JSON.parse(repackagedUnitAsByte.toString('utf-8'))
-            return {key:repackagedUnit.repackagedId,repackagedUnit:repackagedUnit};
+            return JSON.stringify({key:repackagedUnit.repackagedId,repackagedUnit:repackagedUnit});
         }catch(err){
             return err;
         }
     }
 
-    async updateRepackagedUnitById(ctx){
+     async updateRepackagedUnitById(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const params = args.map(element=>element);
@@ -704,8 +767,9 @@ class ContractPalmOil extends Contract{
                 }
             })
 
-            const repackagedUnit = await this.getRepackagedUnitPalmOilById(ctx,repackagedUnitId);
-            if(repackagedUnit === 'Repackaged unit not found'){
+            let repackagedUnit = await this.getRepackagedUnitPalmOilById(ctx,repackagedUnitId);
+            repackagedUnit = JSON.parse(repackagedUnit.toString());
+            if(repackagedUnit.error === 'Repackaged unit not found'){
                 return repackagedUnit;
             }
             const updates = {
@@ -713,45 +777,46 @@ class ContractPalmOil extends Contract{
                 ...newValues
             }
             await ctx.stub.putState(repackagedUnit.key,Buffer.from(JSON.stringify(updates)));
-            return {key:repackagedUnit.repackagedId,repackagedUnit:updates};
+            return JSON.stringify({key:repackagedUnit.repackagedId,repackagedUnit:updates});
 
         }catch(err){
             return err;
         }
     }
 
-    async deleteRepackagedUnitByRepackagedId(ctx,repackagedId){
+     async deleteRepackagedUnitByRepackagedId(ctx,repackagedId){
         try{
             const repackagedUnit = await this.getRepackagedUnitPalmOilById(ctx,repackagedId);
-            if(repackagedUnit === 'Repackaged unit not found'){
+            if(JSON.parse(repackagedUnit.toString()).error === 'Repackaged unit not found'){
                 return repackagedUnit;
             }
             await ctx.stub.deleteState(repackagedUnit.key);
-            return "Deleted Successfully";
+            return JSON.stringify({message:"Deleted Successfully"});
         }catch(err){
             return err
         }
     }
 
     // Change Repackaged Palm Oil Unit Owner
-    async changeRepackagedPalmOilUnitOwner(ctx,repackagedUnitPalmOilId,oldOwnerId,newOwnerId){
+     async changeRepackagedPalmOilUnitOwner(ctx,repackagedUnitPalmOilId,oldOwnerId,newOwnerId){
         try{
-            const repackagedPalmOilUnit = await this.getRepackagedUnitPalmOilById(ctx,repackagedUnitPalmOilId);
-            if(repackagedPalmOilUnit === 'Repackaged unit not found'){
-                return repackagedPalmOilUnit;
+            let repackagedPalmOilUnit = await this.getRepackagedUnitPalmOilById(ctx,repackagedUnitPalmOilId);
+            repackagedPalmOilUnit = JSON.parse(repackagedPalmOilUnit.toString())
+            if(repackagedPalmOilUnit.error === 'Repackaged unit not found'){
+                return JSON.stringify(repackagedPalmOilUnit);
             }
             if(repackagedPalmOilUnit.repackagedUnit.owner === oldOwnerId){
                 repackagedPalmOilUnit.repackagedUnit.owner = newOwnerId;
                 await ctx.stub.putState(repackagedPalmOilUnit.key,Buffer.from(JSON.stringify(repackagedPalmOilUnit.repackagedUnit)))
-                return {key:repackagedPalmOilUnit.key,repackagedUnit:repackagedPalmOilUnit.repackagedUnit};
+                return JSON.stringify({key:repackagedPalmOilUnit.key,repackagedUnit:repackagedPalmOilUnit.repackagedUnit});
             }
-            return "You are not the previous owner";
+            return JSON.stringify({error:"You are not the previous owner"});
         }catch(err){
             return err;
         }
     }
 
-    async getRepackagedUnitHistoryById(ctx,repackagedUnitId){
+     async getRepackagedUnitHistoryById(ctx,repackagedUnitId){
         try{
             const repackagedUnit = await this.getRepackagedUnitPalmOilById(ctx,repackagedUnitId);
             if(repackagedUnit === 'Repackaged unit not found'){
@@ -776,5 +841,6 @@ class ContractPalmOil extends Contract{
         }
     }
 }
-
-module.exports = ContractPalmOil;
+return ContractPalmOil
+}
+module.exports = palmOil;

@@ -1,20 +1,21 @@
 const assetFFB = require('../assets/assetFreshFruitBunchesBatch');
 const {Contract} = require('fabric-contract-api');
 const {checkProducerExists} = require('../utils/producerUtils');
-const {checkProcessorExistsByKey} = require('../utils/processorUtils');
+const {checkProcessorExistsById} = require('../utils/processorUtils');
 
+function ffb(Contract){
 class ContractFFB extends Contract{
     constructor(){
         super('ContractFFB');
         this.TxId = ''
     }
 
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = await ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
-    async createFFB(ctx){
+     async createFFB(ctx){
         try{
         const args = await ctx.stub.getArgs();
         const parameters = [];
@@ -33,7 +34,7 @@ class ContractFFB extends Contract{
             const keys = ffb.producedBy.split('~');
             const producer = await checkProducerExists(ctx,keys);
             if (producer === 'Producer not found'){
-                return producer;
+                return JSON.stringify({error:producer});
             }
             const newFFB = new assetFFB(ffb);
             const indexKey = 'ffb~year~month~day';
@@ -45,14 +46,14 @@ class ContractFFB extends Contract{
             const key = await ctx.stub.createCompositeKey(indexKey,['ffb',year,month,day]);
 
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newFFB)));
-            return {key:key,ffb:newFFB};
+            return JSON.stringify({key:key,ffb:newFFB});
 
         }catch(err){
             return err
         }
     }
 
-    async getFFBByYearMonthDay(ctx,date){
+     async getFFBByYearMonthDay(ctx,date){
        try{
         const keys = date.split('~');
         let allKeys = keys.map(key=>key);
@@ -66,7 +67,10 @@ class ContractFFB extends Contract{
             }
             if(ffb.done){
                 await resultsIterator.close();
-                return allFFBs;
+                if(allFFBs.length === 0){
+                    return JSON.stringify({error:"FFB not found"})
+                }
+                return JSON.stringify({allFFBs});
             }
         }
        }catch(err){
@@ -74,25 +78,25 @@ class ContractFFB extends Contract{
        }
     }
 
-    async getAllFFB(ctx){
+     async getAllFFB(ctx){
         try{
             // collect the keys
             let keys = ['ffb'];
             // retrieve the query iterator
             let resultsIterator = await ctx.stub.getStateByPartialCompositeKey('ffb~year~month~day',keys);
             // Query the world state with the query iterator
-            const allFFBs = [];
+            const FFBs = [];
             while(true){
                 const res = await resultsIterator.next();
                 if(res.value){
-                    allFFBs.push({key:res.value.key,regulator:JSON.parse(res.value.value.toString('utf-8'))});
+                    FFBs.push({key:res.value.key,regulator:JSON.parse(res.value.value.toString('utf-8'))});
                 }
                 if(res.done){
                     await resultsIterator.close();
                     if(allFFBs.length === 0){
-                        return 'No ffbs created';
+                        return JSON.stringify({error:'No ffbs created'});
                     }else{
-                        return allFFBs;
+                        return JSON.stringify({FFBs});
                     }
                 }
             }
@@ -101,7 +105,7 @@ class ContractFFB extends Contract{
         }
     }
 
-    async getFFBById(ctx,ffbId){
+     async getFFBById(ctx,ffbId){
         try{
             const queryString = {
                 "selector":{
@@ -119,9 +123,9 @@ class ContractFFB extends Contract{
                 if(ffb.done){
                     await ffbIterator.close();
                     if(allFFBs.length === 0){
-                        return 'No ffb found';
+                        return JSON.stringify({error:'No ffb found'});
                     }
-                    return allFFBs[0];
+                    return JSON.stringify(allFFBs[0]);
                 }
             }
         }catch(err){
@@ -129,7 +133,7 @@ class ContractFFB extends Contract{
         }
     }
 
-    async getFFBByQueryParams(ctx){
+     async getFFBByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const newValues = {}
@@ -153,7 +157,10 @@ class ContractFFB extends Contract{
                 }
                 if(ffb.done){
                     await ffbIterator.close();
-                    return allFFBs;
+                    if(allFFBs.length === 0){
+                        return JSON.stringify({error:'FFB not found'})
+                    }
+                    return JSON.stringify(allFFBs);
                 }
             }
         }catch(err){
@@ -161,7 +168,7 @@ class ContractFFB extends Contract{
         }
     }
 
-    async updateFFB(ctx){
+     async updateFFB(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const ffbId = args[1];
@@ -171,38 +178,46 @@ class ContractFFB extends Contract{
                     newValues[element] = args[index+1]
                 }
             })
-            const ffb = await this.getFFBById(ctx,ffbId);
+            let ffb = await this.getFFBById(ctx,ffbId);
+            if(JSON.parse(ffb.toString()).error === 'FFB not found'){
+                return ffb;
+            }
+            ffb = JSON.parse(ffb.toString())
             const updates = {...ffb.ffb,...newValues};
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
-            return {key:key,ffb:updates}
+            return JSON.stringify({key:key,ffb:updates});
         }catch(err){
             return err;
         }
     }
 
-    async transferFFBToProcessor(ctx,ffbId,processorKey,arrivalAtProcessorTimestamp){
+     async transferFFBToProcessor(ctx,ffbId,processorId,arrivalAtProcessorTimestamp){
         try{
-            const keys = processorKey.split('~');
-            const processor = await checkProcessorExistsByKey(ctx,keys);
+            const processor = await checkProcessorExistsById(ctx,processorId);
             if(processor === 'Processor not found'){
                 return processor;
             }
-            const ffb = await this.getFFBById(ctx,ffbId);
+            let ffb = await this.getFFBById(ctx,ffbId);
+            if(JSON.parse(ffb).error === 'FFB not found'){
+                return ffb;
+            }
+            ffb = JSON.parse(ffb.toString());
             ffb.ffb = {
                 ...ffb.ffb,
-                soldTo:processorKey,
+                soldTo:processorId,
                 arrivalAtProcessorTimestamp
             }
             await ctx.stub.putState(ffb.key,Buffer.from(JSON.stringify(ffb.ffb)));
+            return JSON.stringify(ffb);
         }catch(err){
             return err
         }
     }
 
-    async getFFBHistoryById(ctx,ffbId){
+     async getFFBHistoryById(ctx,ffbId){
         try{
             const ffb = await this.getFFBById(ctx,ffbId);
-            if(ffb === 'No ffb found'){
+            if(JSON.parse(ffb.toString()).error === 'No ffb found'){
                 return ffb;
             }
             let historyIterator = await ctx.stub.getHistoryForKey(ffb.key);
@@ -216,7 +231,7 @@ class ContractFFB extends Contract{
                 }
                 if(history.done){
                     await historyIterator.close();
-                    return historyRes
+                    return JSON.stringify(historyRes)
                 }
             }
         }catch(err){
@@ -224,6 +239,7 @@ class ContractFFB extends Contract{
         }
     }
 }
-
-module.exports = ContractFFB;
+return ContractFFB;
+}
+module.exports = ffb;
 

@@ -3,18 +3,19 @@
 const assetProducer = require('../assets/assetProducer');
 const {Contract} = require('fabric-contract-api');
 
+function producers(Contract){
 class ContractProducers extends Contract{
     constructor(){
         super('ContractProducers');
         this.TxId = '';
     }
     
-    async beforeTransaction(ctx){
+     async beforeTransaction(ctx){
         this.TxId = ctx.stub.getTxID();
         console.log(this.TxId);
     }
 
-    async createProducer(ctx,producerId,name,email,password,farmName,farmLocation,contact){
+     async createProducer(ctx,producerId,name,email,password,farmName,farmLocation,contact){
         const producer = {
             producerId,
             name,
@@ -47,7 +48,7 @@ class ContractProducers extends Contract{
         }
     }
 
-    async getProducerByEmail(ctx,email){
+     async getProducerByEmail(ctx,email){
         try{
             // collect the keys
             let keys = ['producer',email];
@@ -74,7 +75,7 @@ class ContractProducers extends Contract{
         }
     }
 
-    async getProducerById(ctx,producerId){
+     async getProducerById(ctx,producerId){
         try{
             const queryString = {
                 "selector":{
@@ -102,7 +103,7 @@ class ContractProducers extends Contract{
         }
     }
 
-    async getAllProducers(ctx){
+     async getAllProducers(ctx){
         try{
             // collect the keys
             let keys = ['producer'];
@@ -129,7 +130,7 @@ class ContractProducers extends Contract{
         }
     }
 
-    async getProducersByQueryParams(ctx){
+     async getProducersByQueryParams(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const newValues = {};
@@ -164,7 +165,7 @@ class ContractProducers extends Contract{
         }
     }
 
-    async updateProducer(ctx){
+     async updateProducer(ctx){
         try{
             const args = await ctx.stub.getArgs();
             const producerId = args[1];
@@ -196,7 +197,7 @@ class ContractProducers extends Contract{
         }
     }
 
-    async deleteProducer(ctx,producerId){
+     async deleteProducer(ctx,producerId){
         try{
             const producer = await this.getProducerById(ctx,producerId);
             if(JSON.parse(producer).error === 'Producer not found'){
@@ -209,5 +210,6 @@ class ContractProducers extends Contract{
         }
     }
 }
-
-module.exports = ContractProducers;
+return ContractProducers
+}
+module.exports = producers;
