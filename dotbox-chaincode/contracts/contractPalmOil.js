@@ -5,7 +5,6 @@ const { checkProcessorExistsById } = require('../utils/processorUtils');
 const {checkRegulatorExistsById} =require('../utils/regulatorUtils')
 const {Contract} = require('fabric-contract-api');
 
-function palmOil(Contract){
 class ContractPalmOil extends Contract{
     constructor(){
         super('ContractPalmOil');
@@ -841,6 +840,4 @@ class ContractPalmOil extends Contract{
         }
     }
 }
-return ContractPalmOil
-}
-module.exports = palmOil;
+module.exports = ContractPalmOil

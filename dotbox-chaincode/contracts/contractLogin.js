@@ -1,42 +1,43 @@
 'use strict';
+const { Contract } = require('fabric-contract-api');
+class ContractLogin extends Contract {
+    constructor(){
+        super();
+        this.TxId = '';
+    }
 
-function login(Contract){
-    class ContractLogin extends Contract {
-        constructor(){
-            super('Contract Login');
-            this.TxId = '';
-        }
+    async beforeTransaction(ctx){
+        this.TxId = ctx.stub.getTxID()
+    }
 
-         async beforeTransaction(ctx){
-            this.TxId = await ctx.stub.getTxID()
-        }
-
-         async getUserDetails(ctx,email){
+    async getUserDetails(ctx,email){
+        try{       
             const queryString = {
-                selector:{
-                    email:email
+                "selector":{
+                    "email":email
                 }
             }
-
-            const queryIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
-            let user = [];
+            let usersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
+            const user = []
             while(true){
-                let currentUser = await queryIterator.next();
+                let currentUser = await usersIterator.next();
                 if(currentUser.value){
                     user.push({key:currentUser.value.key,user:JSON.parse(currentUser.value.value.toString('utf-8'))});
                 }
                 if(currentUser.done){
-                    await queryIterator.close();
+                    await usersIterator.close();
                     if(user.length === 0){
-                        return JSON.stringify({error:"User does not exist"});
+                        return JSON.stringify({error:'User does not exist'});
                     }
                     return JSON.stringify(user[0]);
                 }
             }
+        }catch(err){
+            return err;
         }
     }
+}    
 
-    return ContractLogin;
-}
 
-module.exports = login;
+
+module.exports = ContractLogin;

@@ -2,8 +2,6 @@ const assetFFB = require('../assets/assetFreshFruitBunchesBatch');
 const {Contract} = require('fabric-contract-api');
 const {checkProducerExists} = require('../utils/producerUtils');
 const {checkProcessorExistsById} = require('../utils/processorUtils');
-
-function ffb(Contract){
 class ContractFFB extends Contract{
     constructor(){
         super('ContractFFB');
@@ -239,7 +237,5 @@ class ContractFFB extends Contract{
         }
     }
 }
-return ContractFFB;
-}
-module.exports = ffb;
+module.exports = ContractFFB
 

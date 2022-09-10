@@ -2,7 +2,7 @@
 
 # Create Producer
 
-#CORE_PEER_ADDRESS=127.0.0.1:7051 peer chaincode invoke -o 127.0.0.1:7050 -C ch1 -n test -c '{"Args":["createProducer","Joseph Barnes","Shikamaru Farms","Ayeduase","josephbarnes@gmail.com","0547290892"]}' --isInit
+CORE_PEER_ADDRESS=127.0.0.1:7051 peer chaincode invoke -o 127.0.0.1:7050 -C ch1 -n test -c '{"Args":["createProducer","Joseph Barnes","Shikamaru Farms","Ayeduase","josephbarnes@gmail.com","0547290892","Password1@"]}' --isInit
 
 #CORE_PEER_ADDRESS=127.0.0.1:7051 peer chaincode invoke -o 127.0.0.1:7050 -C ch1 -n test -c '{"Args":["createProducer","Gyabeng Elton","Gyabeng Farms","Tema","gyabengelton@gmail.com","02134567009"]}'
 
@@ -17,7 +17,7 @@
 
 # Get All Producers
 
-CORE_PEER_ADDRESS=127.0.0.1:7051 peer chaincode query -o 127.0.0.1:7050 -C ch1 -n test -c '{"Args":["getAllProducers"]}'
+# CORE_PEER_ADDRESS=127.0.0.1:7051 peer chaincode query -o 127.0.0.1:7050 -C ch1 -n test -c '{"Args":["getAllProducers"]}'
 
 # Update Producer
 

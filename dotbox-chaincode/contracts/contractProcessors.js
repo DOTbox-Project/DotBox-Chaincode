@@ -1,11 +1,9 @@
 'use strict';
 const {Contract} = require('fabric-contract-api');
-const assetProcessors = require('../assets/assetProcessor')
-
-function processors(Contract){
+const assetProcessors = require('../assets/assetProcessor');
 class ContractProcessors extends Contract{
     constructor(){
-        super('ContractProcessors');
+        super();
         this.TxId = '';
     }
 
@@ -202,6 +200,4 @@ class ContractProcessors extends Contract{
     }
 
 }
-return ContractProcessors
-}
-module.exports = processors;
+module.exports = ContractProcessors

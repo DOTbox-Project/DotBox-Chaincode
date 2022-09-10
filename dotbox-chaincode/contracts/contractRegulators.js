@@ -3,7 +3,6 @@
 const assetRegulator = require('../assets/assetRegulator');
 const {Contract} = require('fabric-contract-api');
 
-function regulators(Contract){
 class ContractRegulators extends Contract{
     constructor(){
         super('ContractRegulators');
@@ -208,6 +207,4 @@ class ContractRegulators extends Contract{
         }
     }
 }
-return ContractRegulators
-}
-module.exports = regulators;
+module.exports = ContractRegulators
