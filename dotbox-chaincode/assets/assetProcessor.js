@@ -2,7 +2,7 @@ const {v4:uuidv4} = require('uuid');
 
 class Processor{
     constructor(processor){
-        this.processorId = processor.processorId;
+        this.userId = processor.userId;
         this.processorName = processor.name;
         this.processorLocation = processor.location;
         this.email = processor.email;

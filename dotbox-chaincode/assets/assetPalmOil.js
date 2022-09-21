@@ -26,6 +26,7 @@ class unitPalmOil{
         this.owner = unit.owner;
         this.volume = unit.volume;
         this.docType = 'unitPalmOil';
+        this.producedBy = unit.owner;
     }
 }
 

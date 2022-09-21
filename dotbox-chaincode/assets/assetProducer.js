@@ -1,6 +1,6 @@
 class Producer{
     constructor(producer){
-        this.producerId = producer.producerId;
+        this.userId = producer.userId;
         this.name = producer.name;
         this.farmName = producer.farmName;
         this.farmLocation = producer.farmLocation;
