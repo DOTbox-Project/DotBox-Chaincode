@@ -2,7 +2,7 @@ const checkRegulatorExistsById = async (ctx,regulatorId) => {
     const queryString = {
         "selector":{
             "docType":"regulator",
-            regulatorId:regulatorId
+            userId:regulatorId
         }
     }
     let regulatorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));

@@ -21,3 +21,19 @@ const checkFFBExistsById = async (ctx,ffbId) => {
         }
     }
 }
+
+async function checkAllFFBExist(ctx,ffbs){
+    const ffbExists = []
+    for(let component=0;component < ffbs.length;component++){
+        const ffb = await checkFFBExistsById(ctx,ffbs[component]);
+        if(ffb === 'No ffb found'){
+            ffbExists.push(0);
+        }
+        else{
+            ffbExists.push(1);
+        };
+    }
+    return ffbExists;
+    }
+
+module.exports = {checkFFBExistsById,checkAllFFBExist}
