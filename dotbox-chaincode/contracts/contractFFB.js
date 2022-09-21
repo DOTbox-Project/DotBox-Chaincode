@@ -26,7 +26,8 @@ class ContractFFB extends Contract{
                 arrivalAtProcessorTimestamp : parameters[5],
                 producedBy : parameters[6],
                 soldTo : parameters[7],
-                numOfBunches : parameters[8]
+                numOfBunches : parameters[8],
+                ffbId : parameters[9]
             }
             
             const keys = ffb.producedBy.split('~');
@@ -35,13 +36,13 @@ class ContractFFB extends Contract{
                 return JSON.stringify({error:producer});
             }
             const newFFB = new assetFFB(ffb);
-            const indexKey = 'ffb~year~month~day';
+            const indexKey = 'ffb~year~month~day~ffbId';
             const fullDate = new Date(ffb.harvestTimestamp);
             const year = fullDate.getFullYear().toString();
             const month = String(Number(fullDate.getMonth().toString())+1);
             const day = fullDate.getDate().toString();
 
-            const key = await ctx.stub.createCompositeKey(indexKey,['ffb',year,month,day]);
+            const key = await ctx.stub.createCompositeKey(indexKey,['ffb',year,month,day,ffb.ffbId]);
 
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newFFB)));
             return JSON.stringify({key:key,ffb:newFFB});
@@ -56,7 +57,7 @@ class ContractFFB extends Contract{
         const keys = date.split('~');
         let allKeys = keys.map(key=>key);
         allKeys.splice(0,0,'ffb');
-        let resultsIterator = await ctx.stub.getStateByPartialCompositeKey('ffb~year~month~day',allKeys);
+        let resultsIterator = await ctx.stub.getStateByPartialCompositeKey('ffb~year~month~day~ffbId',allKeys);
         let allFFBs = [];
         while(true){
             let ffb = await resultsIterator.next();
@@ -81,7 +82,7 @@ class ContractFFB extends Contract{
             // collect the keys
             let keys = ['ffb'];
             // retrieve the query iterator
-            let resultsIterator = await ctx.stub.getStateByPartialCompositeKey('ffb~year~month~day',keys);
+            let resultsIterator = await ctx.stub.getStateByPartialCompositeKey('ffb~year~month~day~ffbId',keys);
             // Query the world state with the query iterator
             const FFBs = [];
             while(true){
@@ -182,8 +183,8 @@ class ContractFFB extends Contract{
             }
             ffb = JSON.parse(ffb.toString())
             const updates = {...ffb.ffb,...newValues};
-            await ctx.stub.putState(key,Buffer.from(JSON.stringify(updates)));
-            return JSON.stringify({key:key,ffb:updates});
+            await ctx.stub.putState(ffb.key,Buffer.from(JSON.stringify(updates)));
+            return JSON.stringify({key:ffb.key,ffb:updates});
         }catch(err){
             return err;
         }
@@ -193,7 +194,7 @@ class ContractFFB extends Contract{
         try{
             const processor = await checkProcessorExistsById(ctx,processorId);
             if(processor === 'Processor not found'){
-                return processor;
+                return JSON.stringify(processor);
             }
             let ffb = await this.getFFBById(ctx,ffbId);
             if(JSON.parse(ffb).error === 'FFB not found'){

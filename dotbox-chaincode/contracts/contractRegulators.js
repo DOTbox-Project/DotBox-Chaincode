@@ -14,11 +14,11 @@ class ContractRegulators extends Contract{
         console.log(this.TxId);
     }
 
-     async createRegulator(ctx,regulatorId,name,contact,email,location,password){
+     async createRegulator(ctx,userId,name,contact,email,location,password){
         try{
             // instantiating a new regulator
             const regulator = {
-                regulatorId,
+                userId,
                 name,
                 contact,
                 email,
@@ -34,7 +34,7 @@ class ContractRegulators extends Contract{
             
             // creating a composite key
             const indexKey = `regulator~email~regulatorId`;
-            const key = await ctx.stub.createCompositeKey(indexKey,['regulator',newRegulator.email,newRegulator.regulatorId])
+            const key = await ctx.stub.createCompositeKey(indexKey,['regulator',newRegulator.email,newRegulator.userId])
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newRegulator)));
@@ -72,12 +72,12 @@ class ContractRegulators extends Contract{
         }
     }
 
-     async getRegulatorById(ctx,regulatorId){
+     async getRegulatorById(ctx,userId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"regulator",
-                    regulatorId:regulatorId
+                    userId:userId
                 }
             }
             let regulatorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -165,14 +165,14 @@ class ContractRegulators extends Contract{
      async updateRegulator(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const regulatorId = args[1];
+            const userId = args[1];
             const newValues = {};
             args.forEach((element,index)=>{
                 if(index % 2 === 0 && index > 1){
                     newValues[element] = args[index+1];
                 }
             });                 
-            let regulator = await this.getRegulatorBId(ctx,regulatorId);
+            let regulator = await this.getRegulatorBId(ctx,userId);
             regulator = JSON.parse(regulator)
             if(regulator.error === 'Regulator not found'){
                 return JSON.stringify(regulator);
@@ -180,9 +180,9 @@ class ContractRegulators extends Contract{
             const updates = {...regulator.regulator,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteRegulator(ctx,regulatorId);
+                await this.deleteRegulator(ctx,userId);
                 const indexKey = `regulator~email~regulatorId`;
-                key = await ctx.stub.createCompositeKey(indexKey,['regulator',newValues.email,updates.regulatorId])
+                key = await ctx.stub.createCompositeKey(indexKey,['regulator',newValues.email,updates.userId])
             }
             else{
                 key = regulator.key;
@@ -194,9 +194,9 @@ class ContractRegulators extends Contract{
         }
     }
 
-     async deleteRegulator(ctx,regulatorId){
+     async deleteRegulator(ctx,userId){
         try{
-            const regulator = await this.getRegulatorById(ctx,regulatorId);
+            const regulator = await this.getRegulatorById(ctx,userId);
             if(JSON.parse(regulator).error === 'Regulator not found'){
                 return regulator;
             }

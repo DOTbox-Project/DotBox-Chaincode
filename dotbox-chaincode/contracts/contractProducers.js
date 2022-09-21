@@ -14,9 +14,9 @@ class ContractProducers extends Contract{
         console.log(this.TxId);
     }
 
-     async createProducer(ctx,producerId,name,email,password,farmName,farmLocation,contact){
+     async createProducer(ctx,userId,name,email,password,farmName,farmLocation,contact){
         const producer = {
-            producerId,
+            userId,
             name,
             email,
             password,
@@ -36,7 +36,7 @@ class ContractProducers extends Contract{
             
             // creating a composite key
             const indexKey = `producer~email~producerId`;
-            const key = await ctx.stub.createCompositeKey(indexKey,['producer',newProducer.email,newProducer.producerId])
+            const key = await ctx.stub.createCompositeKey(indexKey,['producer',newProducer.email,newProducer.userId])
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newProducer)));
@@ -74,12 +74,12 @@ class ContractProducers extends Contract{
         }
     }
 
-     async getProducerById(ctx,producerId){
+     async getProducerById(ctx,userId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"producer",
-                    producerId:producerId
+                    userId:userId
                 }
             }
             let producersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -167,14 +167,14 @@ class ContractProducers extends Contract{
      async updateProducer(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const producerId = args[1];
+            const userId = args[1];
             const newValues = {};
             args.forEach((element,index)=>{
                 if(index % 2 === 0 && index > 1){
                     newValues[element] = args[index+1];
                 }
             })     
-            let producer = await this.getProducerById(ctx,producerId);
+            let producer = await this.getProducerById(ctx,userId);
             producer = JSON.parse(producer);
             if(producer.error === 'Producer not found'){
                 return JSON.stringify(producer);
@@ -182,9 +182,9 @@ class ContractProducers extends Contract{
             const updates = {...producer.producer,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteProducer(ctx,producerId);
+                await this.deleteProducer(ctx,userId);
                 const indexKey = `producer~email~producerId`;
-                key = await ctx.stub.createCompositeKey(indexKey,['producer',newValues.email,updates.producerId])
+                key = await ctx.stub.createCompositeKey(indexKey,['producer',newValues.email,updates.userId])
             }
             else{
                 key = producer.key;
@@ -196,9 +196,9 @@ class ContractProducers extends Contract{
         }
     }
 
-     async deleteProducer(ctx,producerId){
+     async deleteProducer(ctx,userId){
         try{
-            const producer = await this.getProducerById(ctx,producerId);
+            const producer = await this.getProducerById(ctx,userId);
             if(JSON.parse(producer).error === 'Producer not found'){
                 return producer;
             }
