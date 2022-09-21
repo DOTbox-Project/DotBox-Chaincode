@@ -3,7 +3,6 @@
 const assetConsumer = require('../assets/assetConsumer');
 const {Contract} = require('fabric-contract-api');
 
-function consumers(Contract){
 class ContractConsumers extends Contract{
     constructor(){
         super('ContractConsumers');
@@ -15,11 +14,11 @@ class ContractConsumers extends Contract{
         console.log(this.TxId);
     }
 
-     async createConsumer(ctx,consumerId,name,email,contact,password){
+     async createConsumer(ctx,userId,name,email,contact,password){
         try{
             // instantiating a new consumer
             const consumer = {
-                consumerId,
+                userId,
                 name,
                 email,
                 password,
@@ -34,7 +33,7 @@ class ContractConsumers extends Contract{
             
             // creating a composite key
             const indexKey = `consumer~email~consumerId`;
-            const key = await ctx.stub.createCompositeKey(indexKey,['consumer',newConsumer.email,newConsumer.consumerId])
+            const key = await ctx.stub.createCompositeKey(indexKey,['consumer',newConsumer.email,newConsumer.userId])
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newConsumer)));
@@ -99,12 +98,12 @@ class ContractConsumers extends Contract{
         }
     }
 
-     async getConsumerById(ctx,consumerId){
+     async getConsumerById(ctx,userId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"consumer",
-                    consumerId:consumerId
+                    userId:userId
                 }
             }
             let consumersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -165,14 +164,14 @@ class ContractConsumers extends Contract{
      async updateConsumer(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const consumerId = args[1];
+            const userId = args[1];
             const newValues = {};
             args.forEach((element,index)=>{
                 if(index % 2 === 0 && index > 1){
                     newValues[element] = args[index+1];
                 }
             });
-            let consumer = await this.getConsumerById(ctx,consumerId);
+            let consumer = await this.getConsumerById(ctx,userId);
             consumer = JSON.parse(consumer);
             if(consumer === 'Consumer not found'){
                 return JSON.stringify(consumer);
@@ -180,9 +179,9 @@ class ContractConsumers extends Contract{
             const updates = {...consumer.consumer,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteConsumer(ctx,consumerId);
-                const indexKey = `consumer~email~traderId`;
-                key = await ctx.stub.createCompositeKey(indexKey,['consumer',newValues.email,updates.consumerId])
+                await this.deleteConsumer(ctx,userId);
+                const indexKey = `consumer~email~consumerId`;
+                key = await ctx.stub.createCompositeKey(indexKey,['consumer',newValues.email,updates.userId])
             }
             else{
                 key = consumer.key;
@@ -194,9 +193,9 @@ class ContractConsumers extends Contract{
         }
     }
 
-     async deleteConsumer(ctx,consumerId){
+     async deleteConsumer(ctx,userId){
         try{
-            const consumer = await this.getConsumerById(ctx,consumerId);
+            const consumer = await this.getConsumerById(ctx,userId);
             if(JSON.parse(consumer).error === 'Consumer not found'){
                 return consumer;
             }
@@ -208,6 +207,4 @@ class ContractConsumers extends Contract{
     }
 }
 
-    return ContractConsumers
-}
-module.exports = consumers;
+module.exports = ContractConsumers

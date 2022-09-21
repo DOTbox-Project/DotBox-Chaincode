@@ -22,7 +22,7 @@ const checkProcessorExistsById = async (ctx,processorId) => {
     const queryString = {
         "selector":{
             "docType":"processor",
-            processorId:processorId
+            userId:processorId
         }
     }
     let processorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));

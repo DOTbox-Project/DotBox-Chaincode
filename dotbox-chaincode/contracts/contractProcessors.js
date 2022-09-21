@@ -1,11 +1,9 @@
 'use strict';
 const {Contract} = require('fabric-contract-api');
-const assetProcessors = require('../assets/assetProcessor')
-
-function processors(Contract){
+const assetProcessors = require('../assets/assetProcessor');
 class ContractProcessors extends Contract{
     constructor(){
-        super('ContractProcessors');
+        super();
         this.TxId = '';
     }
 
@@ -14,10 +12,10 @@ class ContractProcessors extends Contract{
         console.log(this.TxId);
     }
 
-     async createProcessor(ctx,processorId,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities,password){
+     async createProcessor(ctx,userId,name,location,email,contact,hasTestingLab,lastCertified,certificateAuthorities,password){
         try{
             const processor = {
-                processorId,
+                userId,
                 name,
                 location,
                 email,
@@ -36,7 +34,7 @@ class ContractProcessors extends Contract{
             }
             // creating a composite key
             const indexKey = `processor~email~processorId`;
-            const key = await ctx.stub.createCompositeKey(indexKey,['processor',newProcessor.email,newProcessor.processorId])
+            const key = await ctx.stub.createCompositeKey(indexKey,['processor',newProcessor.email,newProcessor.userId])
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newProcessor)));
@@ -74,12 +72,12 @@ class ContractProcessors extends Contract{
         }
     }
 
-     async getProcessorById(ctx,processorId){
+     async getProcessorById(ctx,userId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"processor",
-                    processorId:processorId
+                    userId:userId
                 }
             }
             let processorsIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -163,14 +161,14 @@ class ContractProcessors extends Contract{
      async updateProcessor(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const processorId = args[1];
+            const userId = args[1];
             const newValues = {};
             args.forEach((element,index)=>{
                 if(index % 2 === 0 && index > 1){
                     newValues[element] = args[index+1];
                 }
             });
-            let processor = await this.getProcessorById(ctx,processorId);
+            let processor = await this.getProcessorById(ctx,userId);
             processor = JSON.parse(processor)
             if(processor.error === 'Processor not found'){
                 return processor;
@@ -178,9 +176,9 @@ class ContractProcessors extends Contract{
             const updates = {...processor.processor,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteProcessor(ctx,processorId);
+                await this.deleteProcessor(ctx,userId);
                 const indexKey = `processor~email~processorId`;
-                key = await ctx.stub.createCompositeKey(indexKey,['processor',newValues.email,updates.processorId])
+                key = await ctx.stub.createCompositeKey(indexKey,['processor',newValues.email,updates.userId])
             }
             else{
                 key = processor.key;
@@ -192,8 +190,8 @@ class ContractProcessors extends Contract{
         }
     }
 
-     async deleteProcessor(ctx,processorId){
-        const processor = await this.getProcessorById(ctx,processorId);
+     async deleteProcessor(ctx,userId){
+        const processor = await this.getProcessorById(ctx,userId);
         if(JSON.parse(processor).error === 'Processor not found'){
             return processor;
         }
@@ -202,6 +200,4 @@ class ContractProcessors extends Contract{
     }
 
 }
-return ContractProcessors
-}
-module.exports = processors;
+module.exports = ContractProcessors

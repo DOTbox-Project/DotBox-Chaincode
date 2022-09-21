@@ -4,8 +4,8 @@ const assetTestEntry = require('../assets/assetTestEntry');
 const { checkProcessorExistsById } = require('../utils/processorUtils');
 const {checkRegulatorExistsById} =require('../utils/regulatorUtils')
 const {Contract} = require('fabric-contract-api');
+const { checkAllFFBExist } = require('../utils/ffbUtils');
 
-function palmOil(Contract){
 class ContractPalmOil extends Contract{
     constructor(){
         super('ContractPalmOil');
@@ -31,38 +31,39 @@ class ContractPalmOil extends Contract{
                 unitType:params[5],
                 unitQuantity:params[6],
                 volumePerUnit:params[7],
-                producedBy:params[8]
+                producedBy:params[8],
+                palmOilId:params[9]
             }
-
+            
             const newPalmOilBatch = new assetPalmOil(palmOil);
-            const processor = await checkProcessorExistsById(palmOil.producedBy);
+            const processor = await checkProcessorExistsById(ctx,palmOil.producedBy);
             if(processor === 'Processor not found'){
                 return JSON.stringify({error:processor});
             }
-            const ffbExists = componentProductIds.split(',').forEach(async(component)=>{
-                const ffb = await checkFFBExistsById(component);
-                if(ffb === 'No ffb found'){
-                    return 0;
-                }
-                return 1;
-            })
-            if(ffbExists.some(0)){
+            const ffbs = palmOil.componentProductIds.split(',')
+            const ffbExists = await checkAllFFBExist(ctx,ffbs);
+            
+            if(ffbExists.some(element=>element === 0)){
                 return JSON.stringify({error:'FFBs used to create palm oil do not exist'});
             }
             // Create a new palm oil batch
             const indexKey = 'palmoil~processorId~palmOilId';
             const key = await ctx.stub.createCompositeKey(indexKey,['palmoil',newPalmOilBatch.producedBy,newPalmOilBatch.palmOilId])
-
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newPalmOilBatch)));
 
-            await this.createPalmOilLocationData(ctx,processor.processor.processorLocation);
-            
+            // let newLocation = await this.createPalmOilLocationData(ctx,processor.processor.processorLocation);
+            // newLocation = JSON.parse(newLocation);
+            // return JSON.stringify({newLocation})
             // Create unit palm oil based on the unitQuantity 
-            let counter = 1;
-            while(counter <= palmOil.unitQuantity){
-                await this.createUnitPalmOil(ctx,newPalmOilBatch.batchId,newLocation.locationId,processor.processor.processorId,palmOil.volumePerUnit);
-                counter = counter + 1;
-            }
+            // async function createUnitPalmOil()
+            // {
+            //     let counter = 1;
+            //     while(counter <= palmOil.unitQuantity){
+            //         await this.createUnitPalmOil(ctx,newPalmOilBatch.batchId,newLocation.locationId,processor.processor.processorId,palmOil.volumePerUnit);
+            //         counter = counter + 1;
+            //     }
+            // }
+            // await createUnitPalmOil();
 
             return JSON.stringify({key:key,palmOilBatch:newPalmOilBatch});
         }catch(err){
@@ -210,7 +211,7 @@ class ContractPalmOil extends Contract{
             }
 
             const newUnitPalmOil = new assetUnitPalmOil(unitPalmOil);
-            const key = await ctx.createCompositeKey('unitpalmoil~palmoilbatch~unitpalmoilId',['unitpalmoil',newUnitPalmOil.batchId,newUnitPalmOil.unitId]);
+            const key = await ctx.stub.createCompositeKey('unitpalmoil~palmoilbatch~unitpalmoilId',['unitpalmoil',newUnitPalmOil.batchId,newUnitPalmOil.unitId]);
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newUnitPalmOil)));
             return JSON.stringify({key:key,unitPalmOil:newUnitPalmOil});
 
@@ -362,11 +363,15 @@ class ContractPalmOil extends Contract{
 
     // Palm Oil Location Data
 
-     async createPalmOilLocationData(ctx,location){
+     async createPalmOilLocationData(ctx,locationId,location){
         try{
             // Create a new location entry
-            const newLocation = new assetProductionLocationData(location);
-            await ctx.stub.putState(newLocation.locationId,Buffer,from(JSON.stringify(newLocation)));
+            const locationData = {
+                locationId,
+                location
+            }
+            const newLocation = new assetProductionLocationData(locationData);
+            await ctx.stub.putState(newLocation.locationId,Buffer.from(JSON.stringify(newLocation)));
             return JSON.stringify({key:newLocation.locationId,location:newLocation});
         }catch(err){
             return err;
@@ -468,7 +473,8 @@ class ContractPalmOil extends Contract{
                 ffaLevel:params[4],
                 color:params[5],
                 sampleTested:params[6],
-                organization:params[7]
+                organization:params[7],
+                testEntryId:params[8]
             }
 
             const newTestEntry = new assetTestEntry(testEntry);
@@ -581,11 +587,12 @@ class ContractPalmOil extends Contract{
             if(JSON.parse(testEntry.toString()).error === 'Test entry not found'){
                 return testEntry;
             }
-
+            
             palmOilBatch = JSON.parse(palmOilBatch.toString());
             testEntry = JSON.parse(testEntry.toString());
-
+            
             palmOilBatch.palmOilBatch.productTest = palmOilBatch.palmOilBatch.productTest.split(',').push(testEntryId).join(',');
+            return palmOilBatch;
             await ctx.stub.putState(palmOilBatch.key,Buffer.from(JSON.stringify(palmOilBatch.palmOilBatch)));
             return JSON.stringify(palmOilBatch);
         }catch(err){
@@ -841,6 +848,4 @@ class ContractPalmOil extends Contract{
         }
     }
 }
-return ContractPalmOil
-}
-module.exports = palmOil;
+module.exports = ContractPalmOil

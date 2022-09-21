@@ -3,7 +3,6 @@
 const assetTrader = require('../assets/assetTrader');
 const {Contract} = require('fabric-contract-api');
 
-function traders(Contract){
 class ContractTraders extends Contract{
     constructor(){
         super('ContractTraders');
@@ -15,11 +14,11 @@ class ContractTraders extends Contract{
         console.log(this.TxId);
     }
 
-     async createTrader(ctx,traderId,name,storeName,storeLocation,contact,email,category,password){
+     async createTrader(ctx,userId,name,storeName,storeLocation,contact,email,category,password){
         try{
             // instantiating a new trader
             const trader = {
-                traderId,
+                userId,
                 name,
                 storeName,
                 storeLocation,
@@ -37,7 +36,7 @@ class ContractTraders extends Contract{
             
             // creating a composite key
             const indexKey = `trader~email~traderId`;
-            const key = await ctx.stub.createCompositeKey(indexKey,['trader',newTrader.email,newTrader.traderId])
+            const key = await ctx.stub.createCompositeKey(indexKey,['trader',newTrader.email,newTrader.userId])
             
             // committing the asset to the blockchain and updating the world state
             await ctx.stub.putState(key,Buffer.from(JSON.stringify(newTrader)));
@@ -75,12 +74,12 @@ class ContractTraders extends Contract{
         }
     }
 
-     async getTraderById(ctx,traderId){
+     async getTraderById(ctx,userId){
         try{
             const queryString = {
                 "selector":{
                     "docType":"trader",
-                    traderId:traderId
+                    userId:userId
                 }
             }
             let tradersIterator = await ctx.stub.getQueryResult(JSON.stringify(queryString));
@@ -168,14 +167,14 @@ class ContractTraders extends Contract{
      async updateTrader(ctx){
         try{
             const args = await ctx.stub.getArgs();
-            const traderId = args[1];
+            const userId = args[1];
             const newValues = {};
             args.forEach((element,index)=>{
                 if(index % 2 === 0 && index > 1){
                     newValues[element] = args[index+1];
                 }
             });
-            let trader = await this.getTraderById(ctx,traderId);
+            let trader = await this.getTraderById(ctx,userId);
             trader = JSON.parse(trader);
             if(trader.error === 'Trader not found'){
                 return JSON.stringify(trader);
@@ -183,9 +182,9 @@ class ContractTraders extends Contract{
             const updates = {...trader.trader,...newValues};
             let key;
             if (newValues['email'] !== undefined){
-                await this.deleteConsumer(ctx,traderId);
+                await this.deleteConsumer(ctx,userId);
                 const indexKey = `trader~email~traderId`;
-                key = await ctx.stub.createCompositeKey(indexKey,['trader',newValues.email,updates.traderId])
+                key = await ctx.stub.createCompositeKey(indexKey,['trader',newValues.email,updates.userId])
             }
             else{
                 key = trader.key;
@@ -197,9 +196,9 @@ class ContractTraders extends Contract{
         }
     }
 
-     async deleteTrader(ctx,traderId){
+     async deleteTrader(ctx,userId){
         try{
-            const trader = await this.getTraderById(ctx,traderId);
+            const trader = await this.getTraderById(ctx,userId);
             if(JSON.parse(trader).error === 'Trader not found'){
                 return trader;
             }
@@ -210,6 +209,4 @@ class ContractTraders extends Contract{
         }
     }
 }
-return ContractTraders
-}
-module.exports = traders;
+module.exports = ContractTraders
