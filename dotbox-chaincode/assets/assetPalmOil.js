@@ -14,6 +14,8 @@ class PalmOil{
         this.approvedBy='';
         this.producedBy=palmOil.producedBy;
         this.volumePerUnit=palmOil.volumePerUnit;
+        this.remainingQuantity = palmOil.unitQuantity;
+        this.transactions = JSON.stringify({});
         this.docType='palmOil';
     }
 }

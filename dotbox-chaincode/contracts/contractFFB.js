@@ -88,11 +88,11 @@ class ContractFFB extends Contract{
             while(true){
                 const res = await resultsIterator.next();
                 if(res.value){
-                    FFBs.push({key:res.value.key,regulator:JSON.parse(res.value.value.toString('utf-8'))});
+                    FFBs.push({key:res.value.key,ffb:JSON.parse(res.value.value.toString('utf-8'))});
                 }
                 if(res.done){
                     await resultsIterator.close();
-                    if(allFFBs.length === 0){
+                    if(FFBs.length === 0){
                         return JSON.stringify({error:'No ffbs created'});
                     }else{
                         return JSON.stringify({FFBs});
