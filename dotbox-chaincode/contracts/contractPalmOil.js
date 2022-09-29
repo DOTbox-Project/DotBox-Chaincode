@@ -187,19 +187,24 @@ class ContractPalmOil extends Contract{
 
      async getPalmOilBatchHistoryByBatchId(ctx,palmOilBatchId){
         try{
-            const palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
+            let palmOilBatch = await this.getPalmOilByBatchId(ctx,palmOilBatchId);
             if(JSON.parse(palmOilBatch).error === 'Palm Oil Batch not found'){
                 return palmOilBatch;
             }
+            palmOilBatch = JSON.parse(palmOilBatch)
             let historyIterator = await ctx.stub.getHistoryForKey(palmOilBatch.key);
             const historyRes = [];
             while(true){
                 let history = await historyIterator.next();
                 if(history.value){
-                    historyRes.push(JSON.parse(history.value.toString('utf-8')))
+                    const tempHistory = {}
+                    // historyRes.push(JSON.parse(history.value.toString('utf-8')))
                     // console.log(history.value);
-                    // historyRes.timestamp = history.value.timestamp;
-                    // historyRes.history = JSON.parse(history.value.value.toString('utf-8'));
+                    tempHistory.timestamp = history.value.timestamp;
+                    tempHistory.transactionId = history.value.txId;
+                    // tempHistory.transaction = await ctx.stub.getTransactionById()
+                    tempHistory.history = JSON.parse(history.value.value.toString('utf-8'));
+                    historyRes.push(tempHistory)
                 }
                 if(history.done){
                     await historyIterator.close();
